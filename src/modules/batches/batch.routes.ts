@@ -62,6 +62,7 @@ const router = Router();
  *         description: Dữ liệu không hợp lệ
  */
 router.get('/api/v1/batches', asyncHandler((req, res) => batchController.listBatches(req, res)));
+router.get('/api/v1/batches/summary', asyncHandler((req, res) => batchController.getBatchesSummary(req, res)));
 router.post('/api/v1/batches', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => batchController.createBatch(req, res)));
 router.get('/api/v1/batches/:id', asyncHandler((req, res) => batchController.getBatchDetail(req, res)));
 router.patch('/api/v1/batches/:id/status', asyncHandler((req, res) => batchController.updateBatchStatus(req, res)));

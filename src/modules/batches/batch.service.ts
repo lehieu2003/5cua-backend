@@ -41,6 +41,16 @@ export class BatchService {
     }));
   }
 
+  async getBatchesSummary(params: {
+    farmId?: number;
+    importDateFrom?: string;
+    importDateTo?: string;
+    status?: string;
+    keyword?: string;
+  }) {
+    return this.repo.getBatchesSummary(params);
+  }
+
   async createBatch(dto: CreateBatchDto) {
     // Trích xuất tất cả boxIds từ cấu trúc lồng nhau: warehouses -> blocks -> locations
     const boxIds: number[] = [];

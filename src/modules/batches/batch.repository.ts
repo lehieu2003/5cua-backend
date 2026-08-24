@@ -15,9 +15,9 @@ export class BatchRepository {
       const s = params.status.toUpperCase().trim();
       if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING' || s === 'RUNNING') {
         dbStatus = BatchStatus.IN_PROGRESS;
-      } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED') {
+      } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED' || s === 'FINISHED') {
         dbStatus = BatchStatus.COMPLETED;
-      } else if (s === 'DRAFT') {
+      } else if (s === 'DRAFT' || s === 'NEW') {
         dbStatus = BatchStatus.DRAFT;
       } else if (s === 'CANCELLED' || s === 'CANCELED') {
         dbStatus = BatchStatus.CANCELLED;
@@ -49,6 +49,62 @@ export class BatchRepository {
       skip: params.offset || 0,
       take: 20,
     });
+  }
+
+  async getBatchesSummary(params: {
+    farmId?: number;
+    importDateFrom?: string;
+    importDateTo?: string;
+    status?: string;
+    keyword?: string;
+  }) {
+    let dbStatus: BatchStatus | undefined;
+    if (params.status && params.status.trim() !== '' && params.status.toLowerCase() !== 'all') {
+      const s = params.status.toUpperCase().trim();
+      if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING' || s === 'RUNNING') {
+        dbStatus = BatchStatus.IN_PROGRESS;
+      } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED' || s === 'FINISHED') {
+        dbStatus = BatchStatus.COMPLETED;
+      } else if (s === 'DRAFT' || s === 'NEW') {
+        dbStatus = BatchStatus.DRAFT;
+      } else if (s === 'CANCELLED' || s === 'CANCELED') {
+        dbStatus = BatchStatus.CANCELLED;
+      }
+    }
+
+    const batches = await prisma.stockImportBatch.findMany({
+      where: {
+        ...(params.farmId && { farmId: params.farmId }),
+        ...(dbStatus && { status: dbStatus }),
+        ...(params.keyword && {
+          OR: [
+            { code: { contains: params.keyword, mode: 'insensitive' } },
+            { originText: { contains: params.keyword, mode: 'insensitive' } },
+          ],
+        }),
+        ...(params.importDateFrom && {
+          importDate: { gte: new Date(params.importDateFrom) },
+        }),
+        ...(params.importDateTo && {
+          importDate: { lte: new Date(params.importDateTo) },
+        }),
+      },
+    });
+
+    let totalQuantity = 0;
+    let totalWeight = 0;
+
+    for (const b of batches) {
+      totalQuantity += (b.currentQuantity ?? b.initialQuantity ?? 0);
+      totalWeight += (b.initialWeight ?? 0);
+    }
+
+    return {
+      total_quantity: totalQuantity,
+      total_weight: totalWeight,
+      totalQuantity,
+      totalWeight,
+    };
   }
 
   async createBatchWithAllocation(data: {

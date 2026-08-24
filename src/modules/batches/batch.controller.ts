@@ -29,6 +29,27 @@ export class BatchController {
   }
 
   /**
+   * REST: GET /api/v1/batches/summary
+   */
+  async getBatchesSummary(req: Request, res: Response) {
+    try {
+      const { farmId, importDateFrom, importDateTo, status, keyword } = req.query;
+
+      const summary = await this.service.getBatchesSummary({
+        farmId: farmId ? parseInt(farmId as string, 10) : undefined,
+        importDateFrom: importDateFrom as string | undefined,
+        importDateTo: importDateTo as string | undefined,
+        status: status as string | undefined,
+        keyword: keyword as string | undefined,
+      });
+
+      return ResponseUtil.success(res, summary);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
    * REST: POST /api/v1/batches
    */
   async createBatch(req: Request, res: Response) {
