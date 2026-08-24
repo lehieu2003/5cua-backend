@@ -70,6 +70,19 @@ export class PondController {
       return ResponseUtil.error(res, error.message);
     }
   }
+
+  /**
+   * REST: PUT /api/v1/ponds/:id
+   */
+  async updatePond(req: Request, res: Response) {
+    try {
+      const pondId = parseInt(req.params.id, 10);
+      const result = await this.service.updatePond(pondId, req.body);
+      return ResponseUtil.success(res, result);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
 }
 
 export const pondController = new PondController();

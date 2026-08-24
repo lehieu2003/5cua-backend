@@ -18,6 +18,18 @@ export class FarmService {
     return this.repo.getOverviewStats(farmId);
   }
 
+  async getFarmWarnings(farmId: number, fromDate?: string, toDate?: string) {
+    return this.repo.findWarnings(farmId, fromDate, toDate);
+  }
+
+  async getFarmOperations(farmId: number, fromDate?: string, toDate?: string) {
+    return this.repo.findOperations(farmId, fromDate, toDate);
+  }
+
+  async getFarmTasks(farmId: number, taskType?: string, keyword?: string) {
+    return [];
+  }
+
   async createFarm(dto: CreateFarmDto) {
     return this.repo.createFarm(dto);
   }

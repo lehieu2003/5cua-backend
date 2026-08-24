@@ -37,6 +37,28 @@ export class ExportService {
       code: exp.code,
     };
   }
+
+  async getExportDetail(id: number) {
+    const exp = await this.repo.findById(id);
+    if (!exp) throw new Error('Không tìm thấy phiếu xuất bán');
+    return {
+      id: exp.id,
+      code: exp.code,
+      name: exp.code,
+      export_date: exp.exportDate.toISOString(),
+      partner_name: exp.partnerName || '',
+      total_quantity: exp.totalQty,
+      total_weight: exp.totalWeight,
+      total_amount: exp.totalAmount,
+      status: exp.status.toLowerCase(),
+      note: exp.note || '',
+      boxes: exp.boxes,
+    };
+  }
+
+  async updateExportStatus(id: number, status: string) {
+    return this.repo.updateStatus(id, status.toUpperCase() as any);
+  }
 }
 
 export const exportService = new ExportService();

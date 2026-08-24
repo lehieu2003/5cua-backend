@@ -45,5 +45,7 @@ router.post('/api/v1/moves', asyncHandler((req, res) => moveController.moveBox(r
  *         description: Thống kê tổng
  */
 router.get('/api/v1/moves/summary', asyncHandler((req, res) => moveController.getSummary(req, res)));
+router.get('/api/v1/moves/:id', asyncHandler((req, res) => moveController.getMoveDetail(req, res)));
+router.patch('/api/v1/moves/:id/status', asyncHandler((req, res) => moveController.updateStatus(req, res)));
 
 export default router;

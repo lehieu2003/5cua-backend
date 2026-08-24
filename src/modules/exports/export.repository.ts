@@ -72,6 +72,22 @@ export class ExportRepository {
       return exp;
     });
   }
+
+  async findById(id: number) {
+    return prisma.exportHistory.findUnique({
+      where: { id },
+      include: {
+        boxes: true,
+      },
+    });
+  }
+
+  async updateStatus(id: number, status: ExportStatus) {
+    return prisma.exportHistory.update({
+      where: { id },
+      data: { status },
+    });
+  }
 }
 
 export const exportRepository = new ExportRepository();

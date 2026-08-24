@@ -74,6 +74,40 @@ export class FarmRepository {
       soft_shell_quantity: softShellCount,
       dead_quantity: deadCount,
       warning_water_count: warnings,
+      total: occupiedBoxes,
+      total_dead: deadCount,
+      total_est: occupiedBoxes,
+    };
+  }
+
+  async findWarnings(farmId: number, fromDate?: string, toDate?: string) {
+    const where: any = { farmId };
+    if (fromDate || toDate) {
+      where.createdAt = {};
+      if (fromDate) where.createdAt.gte = new Date(fromDate);
+      if (toDate) where.createdAt.lte = new Date(toDate);
+    }
+    return prisma.waterWarning.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOperations(farmId: number, fromDate?: string, toDate?: string) {
+    const where: any = { farmId };
+    if (fromDate || toDate) {
+      where.createdAt = {};
+      if (fromDate) where.createdAt.gte = new Date(fromDate);
+      if (toDate) where.createdAt.lte = new Date(toDate);
+    }
+    const logs = await prisma.operationLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, fullName: true, username: true } } },
+    });
+    return {
+      total: logs.length,
+      data: logs,
     };
   }
 

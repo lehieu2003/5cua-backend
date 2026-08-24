@@ -52,9 +52,27 @@ export class FeedingController {
    */
   async listProducts(req: Request, res: Response) {
     try {
-      const categoryType = (req.query.categoryType as string) || 'feed';
+      const categoryType = (req.query.categoryType as string) || (req.query.category as string) || 'feed';
       const products = await this.service.getFeedProducts(categoryType);
       return ResponseUtil.success(res, products);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  async getFeedingStatuses(req: Request, res: Response) {
+    try {
+      const statuses = await this.service.getFeedingStatuses();
+      return ResponseUtil.success(res, statuses);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  async getShapeStatuses(req: Request, res: Response) {
+    try {
+      const shapes = await this.service.getShapeStatuses();
+      return ResponseUtil.success(res, shapes);
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);
     }

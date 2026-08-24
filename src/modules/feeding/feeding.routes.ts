@@ -59,5 +59,7 @@ router.post('/api/v1/feeding', asyncHandler((req, res) => feedingController.crea
  *         description: Danh sách sản phẩm
  */
 router.get('/api/v1/feeding/products', asyncHandler((req, res) => feedingController.listProducts(req, res)));
+router.get('/api/v1/feeding/status', asyncHandler((req, res) => feedingController.getFeedingStatuses(req, res)));
+router.get('/api/v1/feeding/shapes', asyncHandler((req, res) => feedingController.getShapeStatuses(req, res)));
 
 export default router;

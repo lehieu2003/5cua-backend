@@ -133,6 +133,16 @@ export class PondService {
       shape_id: box.shapeStatusId,
     }));
   }
+
+  async updatePond(pondId: number, data: any) {
+    return this.repo.updatePond(pondId, {
+      name: data.name,
+      code: data.code,
+      volume: data.volume ? parseFloat(data.volume) : undefined,
+      area: data.area ? parseFloat(data.area) : undefined,
+      status: data.status || data.pond_status,
+    });
+  }
 }
 
 export const pondService = new PondService();

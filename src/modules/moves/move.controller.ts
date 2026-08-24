@@ -44,6 +44,33 @@ export class MoveController {
       total_weight: 45.8,
     });
   }
+
+  /**
+   * REST: GET /api/v1/moves/:id
+   */
+  async getMoveDetail(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const detail = await this.service.getMoveDetail(id);
+      return ResponseUtil.success(res, detail);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: PATCH /api/v1/moves/:id/status
+   */
+  async updateStatus(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { status } = req.body;
+      const result = await this.service.updateMoveStatus(id, status);
+      return ResponseUtil.success(res, result);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
 }
 
 export const moveController = new MoveController();

@@ -121,6 +121,13 @@ export class BatchRepository {
       },
     });
   }
+
+  async updateStatus(id: number, status: BatchStatus) {
+    return prisma.stockImportBatch.update({
+      where: { id },
+      data: { status },
+    });
+  }
 }
 
 export const batchRepository = new BatchRepository();

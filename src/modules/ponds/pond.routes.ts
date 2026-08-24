@@ -62,6 +62,7 @@ router.post('/api/v1/ponds', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', '
  *         description: Thông tin chi tiết ao
  */
 router.get('/api/v1/ponds/:id', asyncHandler((req, res) => pondController.getPond(req, res)));
+router.put('/api/v1/ponds/:id', asyncHandler((req, res) => pondController.updatePond(req, res)));
 
 /**
  * @openapi

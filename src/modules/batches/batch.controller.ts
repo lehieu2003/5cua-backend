@@ -58,6 +58,33 @@ export class BatchController {
       return ResponseUtil.error(res, error.message);
     }
   }
+
+  /**
+   * REST: GET /api/v1/batches/:id
+   */
+  async getBatchDetail(req: Request, res: Response) {
+    try {
+      const batchId = parseInt(req.params.id, 10);
+      const batch = await this.service.getBatchDetails(batchId);
+      return ResponseUtil.success(res, batch);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: PATCH /api/v1/batches/:id/status
+   */
+  async updateBatchStatus(req: Request, res: Response) {
+    try {
+      const batchId = parseInt(req.params.id, 10);
+      const { status } = req.body;
+      const result = await this.service.updateBatchStatus(batchId, status);
+      return ResponseUtil.success(res, result);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
 }
 
 export const batchController = new BatchController();

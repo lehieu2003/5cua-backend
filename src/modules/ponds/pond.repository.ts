@@ -145,6 +145,13 @@ export class PondRepository {
       orderBy: [{ block: { posZ: 'asc' } }, { row: 'asc' }, { column: 'asc' }],
     });
   }
+
+  async updatePond(id: number, data: { name?: string; code?: string; volume?: number; area?: number; status?: string }) {
+    return prisma.pond.update({
+      where: { id },
+      data,
+    });
+  }
 }
 
 export const pondRepository = new PondRepository();

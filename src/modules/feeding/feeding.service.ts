@@ -60,6 +60,14 @@ export class FeedingService {
       price: p.price,
     }));
   }
+
+  async getFeedingStatuses() {
+    return this.repo.getFeedingStatuses();
+  }
+
+  async getShapeStatuses() {
+    return this.repo.getShapeStatuses();
+  }
 }
 
 export const feedingService = new FeedingService();

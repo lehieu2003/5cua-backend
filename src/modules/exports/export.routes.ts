@@ -69,5 +69,7 @@ router.post('/api/v1/exports', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER',
  *         description: Thống kê tổng xuất
  */
 router.get('/api/v1/exports/summary', asyncHandler((req, res) => exportController.getSummary(req, res)));
+router.get('/api/v1/exports/:id', asyncHandler((req, res) => exportController.getDetail(req, res)));
+router.patch('/api/v1/exports/:id/status', asyncHandler((req, res) => exportController.updateStatus(req, res)));
 
 export default router;

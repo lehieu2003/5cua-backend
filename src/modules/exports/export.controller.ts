@@ -42,6 +42,33 @@ export class ExportController {
       total_weight: 32.5,
     });
   }
+
+  /**
+   * REST: GET /api/v1/exports/:id
+   */
+  async getDetail(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const detail = await this.service.getExportDetail(id);
+      return ResponseUtil.success(res, detail);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: PATCH /api/v1/exports/:id/status
+   */
+  async updateStatus(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { status } = req.body;
+      const result = await this.service.updateExportStatus(id, status);
+      return ResponseUtil.success(res, result);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
 }
 
 export const exportController = new ExportController();

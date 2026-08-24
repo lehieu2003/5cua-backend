@@ -66,6 +66,23 @@ export class MoveRepository {
       take: 50,
     });
   }
+
+  async findById(id: number) {
+    return prisma.stockPickingMove.findUnique({
+      where: { id },
+      include: {
+        sourceBox: { include: { block: { include: { pond: true } } } },
+        destBox: { include: { block: { include: { pond: true } } } },
+      },
+    });
+  }
+
+  async updateStatus(id: number, status: MoveStatus) {
+    return prisma.stockPickingMove.update({
+      where: { id },
+      data: { status },
+    });
+  }
 }
 
 export const moveRepository = new MoveRepository();

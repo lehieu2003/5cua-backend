@@ -37,5 +37,8 @@ router.get('/api/v1/farms', asyncHandler((req, res) => farmController.getAllFarm
  *               $ref: '#/components/schemas/FarmOverview'
  */
 router.get('/api/v1/farms/:id/overview', asyncHandler((req, res) => farmController.getFarmOverview(req, res)));
+router.get('/api/v1/farms/:id/warnings', asyncHandler((req, res) => farmController.getFarmWarnings(req, res)));
+router.get('/api/v1/farms/:id/operations', asyncHandler((req, res) => farmController.getFarmOperations(req, res)));
+router.get('/api/v1/farms/:id/tasks', asyncHandler((req, res) => farmController.getFarmTasks(req, res)));
 
 export default router;

@@ -77,6 +77,27 @@ export class FeedingRepository {
       },
     });
   }
+
+  async getFeedingStatuses() {
+    const statuses = await prisma.feedingStatusMaster.findMany();
+    if (statuses.length > 0) return statuses;
+    return [
+      { id: 1, name: 'Ăn hết', feedNum: 1.0 },
+      { id: 2, name: 'Ăn một phần', feedNum: 0.5 },
+      { id: 3, name: 'Không ăn', feedNum: 0.0 },
+    ];
+  }
+
+  async getShapeStatuses() {
+    const shapes = await prisma.shapeStatusMaster.findMany();
+    if (shapes.length > 0) return shapes;
+    return [
+      { id: 1, name: 'Bình thường' },
+      { id: 2, name: 'Cua lột' },
+      { id: 3, name: 'Yếu' },
+      { id: 4, name: 'Bệnh' },
+    ];
+  }
 }
 
 export const feedingRepository = new FeedingRepository();

@@ -25,6 +25,26 @@ export class MoveService {
       status: m.status.toLowerCase(),
     }));
   }
+
+  async getMoveDetail(id: number) {
+    const m = await this.repo.findById(id);
+    if (!m) throw new Error('Không tìm thấy bản ghi chuyển hộp');
+    return {
+      id: m.id,
+      code: `MOVE-${m.id}`,
+      unit_id: m.sourceBox.block.pond.id.toString(),
+      obj_box_id: m.sourceBoxId.toString(),
+      dest_box_id: m.destBoxId.toString(),
+      move_at: m.movedAt.toISOString(),
+      record_id: m.id.toString(),
+      status: m.status.toLowerCase(),
+      reason: m.reason || '',
+    };
+  }
+
+  async updateMoveStatus(id: number, status: string) {
+    return this.repo.updateStatus(id, status.toUpperCase() as any);
+  }
 }
 
 export const moveService = new MoveService();

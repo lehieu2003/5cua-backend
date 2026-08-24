@@ -18,8 +18,8 @@ export class BatchService {
       id: b.id.toString(),
       code: b.code,
       name: b.code,
-      import_date: b.importDate.toISOString(),
-      expected_harvest_date: b.expectedHarvestDate?.toISOString() || '',
+      import_date: b.importDate ? b.importDate.toISOString() : null,
+      expected_harvest_date: b.expectedHarvestDate ? b.expectedHarvestDate.toISOString() : null,
       origin_text: b.originText || '',
       product_name: b.product.name,
       product_id: b.productId,
@@ -87,9 +87,39 @@ export class BatchService {
   }
 
   async getBatchDetails(batchId: number) {
-    const batch = await this.repo.findById(batchId);
-    if (!batch) throw new Error('Không tìm thấy thông tin đợt nhập');
-    return batch;
+    const b = await this.repo.findById(batchId);
+    if (!b) throw new Error('Không tìm thấy thông tin đợt nhập');
+    return {
+      id: b.id.toString(),
+      code: b.code,
+      name: b.code,
+      import_date: b.importDate ? b.importDate.toISOString() : null,
+      expected_harvest_date: b.expectedHarvestDate ? b.expectedHarvestDate.toISOString() : null,
+      origin_text: b.originText || '',
+      product_name: b.product.name,
+      product_id: b.productId,
+      initial_quantity: b.initialQuantity,
+      initial_weight: b.initialWeight,
+      current_quantity: b.currentQuantity,
+      dead_quantity: b.deadQuantity,
+      dead_weight: b.deadWeight,
+      cost: b.cost,
+      current_costs: b.cost,
+      total_revenue: 0,
+      expected_revenue: b.expectedRevenue,
+      expected_success_rate: b.expectedSuccessRate,
+      status: b.status.toLowerCase(),
+      note: b.note || '',
+      images: b.images.map((img) => ({
+        id: img.id,
+        name: `image_${img.id}`,
+        imageUrl: img.imageUrl,
+      })),
+    };
+  }
+
+  async updateBatchStatus(batchId: number, status: string) {
+    return this.repo.updateStatus(batchId, status.toUpperCase() as any);
   }
 }
 

@@ -73,5 +73,6 @@ router.post('/api/v1/water/checks', asyncHandler((req, res) => waterController.a
  *         description: Số lượng cảnh báo
  */
 router.get('/api/v1/water/warnings/count', asyncHandler((req, res) => waterController.getWarningCount(req, res)));
+router.get('/api/v1/water/warning-count', asyncHandler((req, res) => waterController.getWarningCount(req, res)));
 
 export default router;
