@@ -1,0 +1,43 @@
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: 5cua_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: 5cua_farm_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d 5cua_farm_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── pgAdmin (Web UI quản lý DB) ────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: 5cua_pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@5cua.vn
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local

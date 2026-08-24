@@ -1,0 +1,445 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  FARM_OWNER
+  MANAGER
+  TECHNICIAN
+  WORKER
+}
+
+enum BoxStatus {
+  EMPTY
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
+
+enum BatchStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ActionType {
+  FEEDING
+  PROBIOTIC
+}
+
+enum ExportStatus {
+  DRAFT
+  CONFIRMED
+  DONE
+  CANCELLED
+}
+
+enum MoveStatus {
+  DRAFT
+  PROCESSING
+  DONE
+  CANCELLED
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  username     String       @unique
+  email        String?      @unique
+  phone        String?      @unique
+  passwordHash String       @map("password_hash")
+  fullName     String       @map("full_name")
+  avatarUrl    String?      @map("avatar_url")
+  memberType   String?      @default("STANDARD") @map("member_type")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  farmMembers  FarmMember[]
+  notifications Notification[]
+  operationLogs OperationLog[]
+
+  @@map("users")
+}
+
+model Farm {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  address     String?
+  description String?
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  members     FarmMember[]
+  ponds       Pond[]
+  batches     StockImportBatch[]
+  exports     ExportHistory[]
+  waterWarnings WaterWarning[]
+
+  @@map("farms")
+}
+
+model FarmMember {
+  id        Int      @id @default(autoincrement())
+  farmId    Int      @map("farm_id")
+  userId    Int      @map("user_id")
+  role      UserRole @default(WORKER)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, userId])
+  @@map("farm_members")
+}
+
+model Pond {
+  id          Int       @id @default(autoincrement())
+  farmId      Int       @map("farm_id")
+  code        String
+  name        String
+  pondType    String    @default("box_grid") @map("pond_type")
+  numBlock    Int       @default(1) @map("num_block")
+  numRow      Int       @default(1) @map("num_row")
+  numColumn   Int       @default(1) @map("num_column")
+  totalBox    Int       @default(0) @map("total_box")
+  volume      Float?    @default(0)
+  area        Float?    @default(0)
+  status      String    @default("active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  farm        Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  blocks      Block[]
+  feedingLogs FeedingRecord[]
+  inspectionLogs InspectionCleaningRecord[]
+  waterChecks WaterCheckHistory[]
+
+  @@unique([farmId, code])
+  @@map("ponds")
+}
+
+model Block {
+  id        Int      @id @default(autoincrement())
+  pondId    Int      @map("pond_id")
+  posZ      Int      @default(1) @map("pos_z")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pond      Pond     @relation(fields: [pondId], references: [id], onDelete: Cascade)
+  boxes     Box[]
+
+  @@map("blocks")
+}
+
+model Box {
+  id            Int         @id @default(autoincrement())
+  blockId       Int         @map("block_id")
+  code          String
+  row           Int
+  column        Int
+  status        BoxStatus   @default(EMPTY)
+  
+  batchId       Int?        @map("batch_id")
+  productId     Int?        @map("product_id")
+  feedStatusId  Int?        @map("feed_status_id")
+  shapeStatusId Int?        @map("shape_status_id")
+  occupiedAt    DateTime?   @map("occupied_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  block         Block       @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  batch         StockImportBatch? @relation(fields: [batchId], references: [id])
+  product       ProductTemplate?  @relation(fields: [productId], references: [id])
+
+  sourceMoves   StockPickingMove[] @relation("SourceBoxMoves")
+  destMoves     StockPickingMove[] @relation("DestBoxMoves")
+
+  @@unique([blockId, row, column])
+  @@index([status])
+  @@map("boxes")
+}
+
+model ProductCategory {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  products  ProductTemplate[]
+
+  @@map("product_categories")
+}
+
+model ProductTemplate {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int      @map("category_id")
+  code        String   @unique
+  name        String
+  uom         String   @default("kg")
+  price       Float    @default(0)
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  category    ProductCategory @relation(fields: [categoryId], references: [id])
+  boxes       Box[]
+  feedingItems FeedingItem[]
+  importBatches StockImportBatch[]
+
+  @@map("product_templates")
+}
+
+model FeedingStatusMaster {
+  id        Int      @id @default(autoincrement())
+  name      String
+  feedNum   Float    @default(1.0) @map("feed_num")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("feeding_status_master")
+}
+
+model ShapeStatusMaster {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("shape_status_master")
+}
+
+model StockImportBatch {
+  id                  Int          @id @default(autoincrement())
+  farmId              Int          @map("farm_id")
+  code                String       @unique
+  productId           Int          @map("product_id")
+  partnerId           Int?         @map("partner_id")
+  originText          String?      @map("origin_text")
+  importDate          DateTime     @map("import_date")
+  expectedHarvestDate DateTime?    @map("expected_harvest_date")
+  initialQuantity     Int          @map("initial_quantity")
+  initialWeight       Float        @map("initial_weight")
+  currentQuantity     Int          @default(0) @map("current_quantity")
+  cost                Float        @default(0)
+  expectedRevenue     Float        @default(0) @map("expected_revenue")
+  expectedSuccessRate Float        @default(90.0) @map("expected_success_rate")
+  deadQuantity        Int          @default(0) @map("dead_quantity")
+  deadWeight          Float        @default(0.0) @map("dead_weight")
+  status              BatchStatus  @default(DRAFT)
+  note                String?
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  farm                Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  product             ProductTemplate @relation(fields: [productId], references: [id])
+  boxes               Box[]
+  images              BatchImage[]
+
+  @@index([farmId, status])
+  @@map("stock_import_batches")
+}
+
+model BatchImage {
+  id        Int      @id @default(autoincrement())
+  batchId   Int      @map("batch_id")
+  imageUrl  String   @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  batch     StockImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("batch_images")
+}
+
+model FeedingRecord {
+  id          Int        @id @default(autoincrement())
+  pondId      Int        @map("pond_id")
+  actionType  ActionType @default(FEEDING) @map("action_type")
+  crabQuantityAtTime Int @default(0) @map("crab_quantity_at_time")
+  note        String?
+  recordedAt  DateTime   @default(now()) @map("recorded_at")
+
+  pond        Pond       @relation(fields: [pondId], references: [id], onDelete: Cascade)
+  items       FeedingItem[]
+
+  @@index([pondId, actionType, recordedAt])
+  @@map("feeding_records")
+}
+
+model FeedingItem {
+  id          Int      @id @default(autoincrement())
+  recordId    Int      @map("record_id")
+  productId   Int      @map("product_id")
+  quantity    Float    @map("quantity")
+
+  record      FeedingRecord   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  product     ProductTemplate @relation(fields: [productId], references: [id])
+
+  @@map("feeding_items")
+}
+
+model InspectionCleaningRecord {
+  id                Int      @id @default(autoincrement())
+  pondId            Int      @map("pond_id")
+  softShellQuantity Int      @default(0) @map("soft_shell_quantity")
+  deadQuantity      Int      @default(0) @map("dead_quantity")
+  feedStatusId      Int?     @map("feed_status_id")
+  shapeStatusId     Int?     @map("shape_status_id")
+  checkDate         DateTime @default(now()) @map("check_date")
+
+  pond              Pond     @relation(fields: [pondId], references: [id], onDelete: Cascade)
+  details           InspectionCleaningBox[]
+
+  @@map("inspection_cleaning_records")
+}
+
+model InspectionCleaningBox {
+  id          Int      @id @default(autoincrement())
+  recordId    Int      @map("record_id")
+  boxId       Int      @map("box_id")
+  isSoftShell Boolean  @default(false) @map("is_soft_shell")
+  isDead      Boolean  @default(false) @map("is_dead")
+
+  record      InspectionCleaningRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@map("inspection_cleaning_boxes")
+}
+
+model WaterParameter {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  unit        String
+  minNormal   Float    @map("min_normal")
+  maxNormal   Float    @map("max_normal")
+  minCritical Float    @map("min_critical")
+  maxCritical Float    @map("max_critical")
+  ordinal     Int      @default(1)
+  isShow      Boolean  @default(true) @map("is_show")
+
+  checkItems  WaterCheckItem[]
+
+  @@map("water_parameters")
+}
+
+model WaterCheckHistory {
+  id          Int      @id @default(autoincrement())
+  pondId      Int      @map("pond_id")
+  checkDate   DateTime @default(now()) @map("check_date")
+  hasWarning  Boolean  @default(false) @map("has_warning")
+  note        String?
+
+  pond        Pond     @relation(fields: [pondId], references: [id], onDelete: Cascade)
+  items       WaterCheckItem[]
+
+  @@index([pondId, checkDate])
+  @@map("water_check_histories")
+}
+
+model WaterCheckItem {
+  id          Int      @id @default(autoincrement())
+  historyId   Int      @map("history_id")
+  parameterId Int      @map("parameter_id")
+  value       Float
+  isWarning   Boolean  @default(false) @map("is_warning")
+
+  history     WaterCheckHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  parameter   WaterParameter    @relation(fields: [parameterId], references: [id])
+
+  @@map("water_check_items")
+}
+
+model WaterWarning {
+  id          Int      @id @default(autoincrement())
+  farmId      Int      @map("farm_id")
+  pondId      Int      @map("pond_id")
+  title       String
+  message     String
+  severity    String   @default("WARNING")
+  isResolved  Boolean  @default(false) @map("is_resolved")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("water_warnings")
+}
+
+model StockPickingMove {
+  id          Int        @id @default(autoincrement())
+  sourceBoxId Int        @map("source_box_id")
+  destBoxId   Int        @map("dest_box_id")
+  status      MoveStatus @default(DONE)
+  reason      String?
+  movedAt     DateTime   @default(now()) @map("moved_at")
+
+  sourceBox   Box        @relation("SourceBoxMoves", fields: [sourceBoxId], references: [id])
+  destBox     Box        @relation("DestBoxMoves", fields: [destBoxId], references: [id])
+
+  @@map("stock_picking_moves")
+}
+
+model ExportHistory {
+  id          Int          @id @default(autoincrement())
+  farmId      Int          @map("farm_id")
+  code        String       @unique
+  exportDate  DateTime     @default(now()) @map("export_date")
+  partnerName String?      @map("partner_name")
+  totalQty    Int          @default(0) @map("total_qty")
+  totalWeight Float        @default(0) @map("total_weight")
+  totalAmount Float        @default(0) @map("total_amount")
+  status      ExportStatus @default(DRAFT)
+  note        String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  farm        Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  boxes       ExportBox[]
+
+  @@map("export_histories")
+}
+
+model ExportBox {
+  id          Int      @id @default(autoincrement())
+  exportId    Int      @map("export_id")
+  boxId       Int      @map("box_id")
+  productId   Int      @map("product_id")
+  weight      Float    @default(0)
+  price       Float    @default(0)
+
+  export      ExportHistory @relation(fields: [exportId], references: [id], onDelete: Cascade)
+
+  @@map("export_boxes")
+}
+
+model Notification {
+  id               Int      @id @default(autoincrement())
+  userId           Int?     @map("user_id")
+  name             String
+  shortDescription String   @map("short_description")
+  message          String?
+  isRead           Boolean  @default(false) @map("is_read")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model OperationLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @map("user_id")
+  farmId      Int      @map("farm_id")
+  action      String
+  details     Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([farmId, createdAt])
+  @@map("operation_logs")
+}
