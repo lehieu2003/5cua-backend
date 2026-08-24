@@ -82,10 +82,17 @@ export class ExportRepository {
     });
   }
 
-  async updateStatus(id: number, status: ExportStatus) {
+  async updateStatus(id: number, status: string | ExportStatus) {
+    let dbStatus: ExportStatus = ExportStatus.DONE;
+    const s = (status || '').toString().toUpperCase().trim();
+    if (s === 'DRAFT') dbStatus = ExportStatus.DRAFT;
+    else if (s === 'CONFIRMED') dbStatus = ExportStatus.CONFIRMED;
+    else if (s === 'DONE' || s === 'COMPLETED' || s === 'ACTIVE') dbStatus = ExportStatus.DONE;
+    else if (s === 'CANCELLED' || s === 'CANCELED') dbStatus = ExportStatus.CANCELLED;
+
     return prisma.exportHistory.update({
       where: { id },
-      data: { status },
+      data: { status: dbStatus },
     });
   }
 }

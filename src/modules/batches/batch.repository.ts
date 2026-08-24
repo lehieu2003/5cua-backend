@@ -10,10 +10,24 @@ export class BatchRepository {
     keyword?: string;
     offset?: number;
   }) {
+    let dbStatus: BatchStatus | undefined;
+    if (params.status && params.status.trim() !== '' && params.status.toLowerCase() !== 'all') {
+      const s = params.status.toUpperCase().trim();
+      if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING' || s === 'RUNNING') {
+        dbStatus = BatchStatus.IN_PROGRESS;
+      } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED') {
+        dbStatus = BatchStatus.COMPLETED;
+      } else if (s === 'DRAFT') {
+        dbStatus = BatchStatus.DRAFT;
+      } else if (s === 'CANCELLED' || s === 'CANCELED') {
+        dbStatus = BatchStatus.CANCELLED;
+      }
+    }
+
     return prisma.stockImportBatch.findMany({
       where: {
         ...(params.farmId && { farmId: params.farmId }),
-        ...(params.status && { status: params.status.toUpperCase() as BatchStatus }),
+        ...(dbStatus && { status: dbStatus }),
         ...(params.keyword && {
           OR: [
             { code: { contains: params.keyword, mode: 'insensitive' } },
@@ -122,10 +136,22 @@ export class BatchRepository {
     });
   }
 
-  async updateStatus(id: number, status: BatchStatus) {
+  async updateStatus(id: number, status: string | BatchStatus) {
+    let dbStatus: BatchStatus = BatchStatus.IN_PROGRESS;
+    const s = (status || '').toString().toUpperCase().trim();
+    if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING') {
+      dbStatus = BatchStatus.IN_PROGRESS;
+    } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED') {
+      dbStatus = BatchStatus.COMPLETED;
+    } else if (s === 'DRAFT') {
+      dbStatus = BatchStatus.DRAFT;
+    } else if (s === 'CANCELLED' || s === 'CANCELED') {
+      dbStatus = BatchStatus.CANCELLED;
+    }
+
     return prisma.stockImportBatch.update({
       where: { id },
-      data: { status },
+      data: { status: dbStatus },
     });
   }
 }
