@@ -42,7 +42,7 @@ export class ExportRepository {
           totalQty,
           totalWeight,
           totalAmount,
-          status: ExportStatus.DONE,
+          status: ExportStatus.DRAFT,
           note: data.note,
           boxes: {
             create: data.boxes.map((b) => ({
@@ -83,12 +83,12 @@ export class ExportRepository {
   }
 
   async updateStatus(id: number, status: string | ExportStatus) {
-    let dbStatus: ExportStatus = ExportStatus.DONE;
+    let dbStatus: ExportStatus = ExportStatus.DRAFT;
     const s = (status || '').toString().toUpperCase().trim();
-    if (s === 'DRAFT') dbStatus = ExportStatus.DRAFT;
-    else if (s === 'CONFIRMED') dbStatus = ExportStatus.CONFIRMED;
-    else if (s === 'DONE' || s === 'COMPLETED' || s === 'ACTIVE') dbStatus = ExportStatus.DONE;
-    else if (s === 'CANCELLED' || s === 'CANCELED') dbStatus = ExportStatus.CANCELLED;
+    if (s === 'DRAFT' || s === 'MỚI' || s === 'NEW') dbStatus = ExportStatus.DRAFT;
+    else if (s === 'CONFIRMED' || s === 'ĐÃ XÁC NHẬN') dbStatus = ExportStatus.CONFIRMED;
+    else if (s === 'DONE' || s === 'COMPLETED' || s === 'ACTIVE' || s === 'HOÀN THÀNH') dbStatus = ExportStatus.DONE;
+    else if (s === 'CANCEL' || s === 'CANCELLED' || s === 'CANCELED' || s === 'ĐÃ HỦY') dbStatus = ExportStatus.CANCELLED;
 
     return prisma.exportHistory.update({
       where: { id },
