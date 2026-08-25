@@ -23,24 +23,45 @@ export class WaterService {
     }));
   }
 
-  async addWaterCheck(dto: AddWaterCheckDto) {
-    const pondId = parseInt(dto.warehouseId, 10);
+  async addWaterCheck(dto: any) {
+    const pondId = parseInt(dto.pondId || dto.warehouseId || dto.pond_id || dto.warehouse_id || '1', 10);
     const params = await this.repo.getParameters();
-    const paramMap = new Map(params.map((p) => [p.id, p]));
+    const paramById = new Map(params.map((p) => [p.id, p]));
+    const paramByCode = new Map(params.map((p) => [p.code.toLowerCase(), p]));
 
+    const checkList: any[] = dto.items || dto.waterChecks || dto.water_checks || [];
     let hasWarning = false;
-    const items = dto.waterChecks.map((chk) => {
-      const p = paramMap.get(chk.parameterId);
+    const warningsToCreate: Array<{ title: string; message: string; severity: string }> = [];
+
+    const items = checkList.map((chk: any) => {
+      let p = chk.parameterId ? paramById.get(chk.parameterId) : undefined;
+      if (!p && chk.parameterCode) {
+        p = paramByCode.get(String(chk.parameterCode).toLowerCase());
+      }
+
       let isWarn = false;
+      const paramId = p ? p.id : (chk.parameterId || 1);
+      const val = parseFloat(chk.value);
+
       if (p) {
-        if (chk.value < p.minNormal || chk.value > p.maxNormal) {
+        const isCritical =
+          (p.minCritical !== undefined && val < p.minCritical) ||
+          (p.maxCritical !== undefined && val > p.maxCritical);
+
+        if (val < p.minNormal || val > p.maxNormal) {
           isWarn = true;
           hasWarning = true;
+          warningsToCreate.push({
+            title: `Cảnh báo ${p.name}`,
+            message: `${p.name} hiện tại là ${val} ${p.unit} (ngưỡng an toàn ${p.minNormal} - ${p.maxNormal} ${p.unit})`,
+            severity: isCritical ? 'CRITICAL' : 'WARNING',
+          });
         }
       }
+
       return {
-        parameterId: chk.parameterId,
-        value: chk.value,
+        parameterId: paramId,
+        value: val,
         isWarning: isWarn,
       };
     });
@@ -50,12 +71,14 @@ export class WaterService {
       hasWarning,
       note: dto.note,
       items,
+      warnings: warningsToCreate,
     });
 
     return {
       status: 'success',
       has_warning: hasWarning,
       record_id: record.id,
+      warnings_created: warningsToCreate.length,
     };
   }
 
