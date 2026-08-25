@@ -20,9 +20,18 @@ export class MoveService {
       unit_id: m.sourceBox.block.pond.id.toString(),
       obj_box_id: m.sourceBoxId.toString(),
       dest_box_id: m.destBoxId.toString(),
+      source_box_code: m.sourceBox.code,
+      dest_box_code: m.destBox.code,
+      source_pond_id: m.sourceBox.block.pond.id,
+      source_pond_name: `${m.sourceBox.block.pond.name} (${m.sourceBox.block.pond.code})`,
+      source_block_name: m.sourceBox.block.name,
+      dest_pond_id: m.destBox.block.pond.id,
+      dest_pond_name: `${m.destBox.block.pond.name} (${m.destBox.block.pond.code})`,
+      dest_block_name: m.destBox.block.name,
       move_at: m.movedAt.toISOString(),
       record_id: m.id.toString(),
       status: m.status.toLowerCase(),
+      reason: m.reason || 'Sang ao chăm sóc',
     }));
   }
 
@@ -39,10 +48,18 @@ export class MoveService {
       unit_id: m.sourceBox.block.pond.id.toString(),
       obj_box_id: m.sourceBoxId.toString(),
       dest_box_id: m.destBoxId.toString(),
+      source_box_code: m.sourceBox.code,
+      dest_box_code: m.destBox.code,
+      source_pond_id: m.sourceBox.block.pond.id,
+      source_pond_name: `${m.sourceBox.block.pond.name} (${m.sourceBox.block.pond.code})`,
+      source_block_name: m.sourceBox.block.name,
+      dest_pond_id: m.destBox.block.pond.id,
+      dest_pond_name: `${m.destBox.block.pond.name} (${m.destBox.block.pond.code})`,
+      dest_block_name: m.destBox.block.name,
       move_at: m.movedAt.toISOString(),
       record_id: m.id.toString(),
       status: m.status.toLowerCase(),
-      reason: m.reason || '',
+      reason: m.reason || 'Sang ao chăm sóc',
     };
   }
 
