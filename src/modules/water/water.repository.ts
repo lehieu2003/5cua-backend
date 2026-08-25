@@ -12,6 +12,13 @@ export class WaterRepository {
     return prisma.waterCheckHistory.findMany({
       where: { pondId },
       include: {
+        pond: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         items: {
           include: {
             parameter: true,

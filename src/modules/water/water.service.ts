@@ -85,17 +85,47 @@ export class WaterService {
   async getWaterHistory(pondId: number, offset = 0) {
     const histories = await this.repo.getCheckHistoryByPond(pondId, offset);
 
-    return histories.map((h) => ({
-      id: h.id,
-      check_date: h.checkDate.toISOString(),
-      status_check: h.hasWarning ? 'warning' : 'good',
-      water_check_history_datas: h.items.map((it) => ({
-        id: it.id,
-        water_parameters_name: it.parameter.name,
-        water_parameters_value_name: `${it.value} ${it.parameter.unit}`,
-        obtain: it.isWarning ? '0' : '1',
-      })),
-    }));
+    return histories.map((h) => {
+      const paramValues: Record<string, number> = {};
+      for (const it of h.items) {
+        const code = it.parameter?.code?.toLowerCase() || '';
+        paramValues[code] = it.value;
+      }
+
+      return {
+        id: h.id,
+        pondId: h.pondId,
+        pondName: h.pond?.name || `Ao #${h.pondId}`,
+        measuredBy: 'Kỹ thuật viên',
+        measuredAt: h.checkDate.toISOString(),
+        check_date: h.checkDate.toISOString(),
+        hasWarning: h.hasWarning,
+        status_check: h.hasWarning ? 'warning' : 'good',
+        note: h.note,
+        ph: paramValues['ph'],
+        temperature: paramValues['temp'] ?? paramValues['temperature'],
+        salinity: paramValues['salinity'],
+        do: paramValues['do'],
+        nh3: paramValues['nh3'],
+        no2: paramValues['no2'],
+        alkalinity: paramValues['alkalinity'],
+        items: h.items.map((it) => ({
+          id: it.id,
+          parameterId: it.parameterId,
+          parameterCode: it.parameter.code,
+          parameterName: it.parameter.name,
+          value: it.value,
+          unit: it.parameter.unit,
+          isWarning: it.isWarning,
+        })),
+        water_check_history_datas: h.items.map((it) => ({
+          id: it.id,
+          water_parameters_name: it.parameter.name,
+          water_parameters_value_name: `${it.value} ${it.parameter.unit}`,
+          obtain: it.isWarning ? '0' : '1',
+        })),
+      };
+    });
   }
 
   async getWarningCount(farmId: number) {
