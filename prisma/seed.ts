@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { PrismaClient, BoxStatus, UserRole, BatchStatus, ExportStatus, ActionType } from '@prisma/client';
+import { PrismaClient, BoxStatus, UserRole, BatchStatus, ExportStatus, ActionType, MoveStatus } from '@prisma/client';
 import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -593,6 +593,169 @@ async function main() {
         userId: log.userId,
         action: log.action,
         details: log.details as any,
+      },
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 11. SEED SANG AO & CHUYỂN HỘP (STOCK PICKING MOVES)
+  // ─────────────────────────────────────────────────────────────────────────────
+  console.log('🔄 Seeding Sang Ao & Chuyển Hộp (Stock Picking Moves)...');
+
+  // Lấy danh sách các boxes theo từng ao
+  const pondBoxesMap: Record<string, any[]> = {};
+  for (const pc of pondsConfig) {
+    const boxes = await prisma.box.findMany({
+      where: {
+        block: {
+          pond: {
+            code: pc.code,
+          },
+        },
+      },
+      include: {
+        block: {
+          include: {
+            pond: true,
+          },
+        },
+      },
+      take: 20,
+    });
+    pondBoxesMap[pc.code] = boxes;
+  }
+
+  const movesData: {
+    sourceBox: any;
+    destBox: any;
+    status: MoveStatus;
+    reason: string;
+    movedAt: Date;
+  }[] = [];
+
+  // Farm Bạc Liêu: Chuyển hộp nội bộ trong AO-BL-01
+  const bl1Boxes = pondBoxesMap['AO-BL-01'] || [];
+  if (bl1Boxes.length >= 4) {
+    movesData.push({
+      sourceBox: bl1Boxes[0],
+      destBox: bl1Boxes[1],
+      status: MoveStatus.DONE,
+      reason: 'Chuyển hộp vệ sinh hệ thống định kỳ',
+      movedAt: new Date(Date.now() - 6 * 24 * 3600000),
+    });
+    movesData.push({
+      sourceBox: bl1Boxes[2],
+      destBox: bl1Boxes[3],
+      status: MoveStatus.DONE,
+      reason: 'Tách cua phân loại size trọng lượng lớn',
+      movedAt: new Date(Date.now() - 4 * 24 * 3600000),
+    });
+  }
+
+  // Farm Bạc Liêu: Sang ao AO-BL-01 -> AO-BL-03 (Sang ao Cua Cốm Lột)
+  const bl3Boxes = pondBoxesMap['AO-BL-03'] || [];
+  if (bl1Boxes.length >= 6 && bl3Boxes.length >= 4) {
+    movesData.push({
+      sourceBox: bl1Boxes[4],
+      destBox: bl3Boxes[0],
+      status: MoveStatus.DONE,
+      reason: 'Sang ao kích lột xác cua cốm 2 da',
+      movedAt: new Date(Date.now() - 3 * 24 * 3600000),
+    });
+    movesData.push({
+      sourceBox: bl1Boxes[5],
+      destBox: bl3Boxes[1],
+      status: MoveStatus.DONE,
+      reason: 'Sang ao dưỡng cua mềm sau lột',
+      movedAt: new Date(Date.now() - 2 * 24 * 3600000),
+    });
+  }
+
+  // Farm Bạc Liêu: Sang ao AO-BL-02 -> AO-BL-04 (Sang ao Vỗ béo)
+  const bl2Boxes = pondBoxesMap['AO-BL-02'] || [];
+  const bl4Boxes = pondBoxesMap['AO-BL-04'] || [];
+  if (bl2Boxes.length >= 4 && bl4Boxes.length >= 4) {
+    movesData.push({
+      sourceBox: bl2Boxes[0],
+      destBox: bl4Boxes[0],
+      status: MoveStatus.DONE,
+      reason: 'Sang ao vỗ béo tăng trọng chuẩn bị xuất',
+      movedAt: new Date(Date.now() - 1 * 24 * 3600000),
+    });
+    movesData.push({
+      sourceBox: bl2Boxes[1],
+      destBox: bl4Boxes[1],
+      status: MoveStatus.PROCESSING,
+      reason: 'Chuyển hộp theo dõi sức khỏe và chế độ dinh dưỡng riêng',
+      movedAt: new Date(Date.now() - 4 * 3600000),
+    });
+    movesData.push({
+      sourceBox: bl2Boxes[2],
+      destBox: bl4Boxes[2],
+      status: MoveStatus.DRAFT,
+      reason: 'Đề xuất sang ao kiểm tra chất lượng nước',
+      movedAt: new Date(),
+    });
+  }
+
+  // Farm Cà Mau: Chuyển hộp & Sang ao
+  const cm1Boxes = pondBoxesMap['AO-CM-01'] || [];
+  const cm2Boxes = pondBoxesMap['AO-CM-02'] || [];
+  const cm3Boxes = pondBoxesMap['AO-CM-03'] || [];
+  if (cm1Boxes.length >= 4 && cm2Boxes.length >= 4) {
+    movesData.push({
+      sourceBox: cm1Boxes[0],
+      destBox: cm2Boxes[0],
+      status: MoveStatus.DONE,
+      reason: 'Sang khu A2 phân hạng cua tuyển chọn xuất khẩu',
+      movedAt: new Date(Date.now() - 5 * 24 * 3600000),
+    });
+    movesData.push({
+      sourceBox: cm1Boxes[1],
+      destBox: cm1Boxes[2],
+      status: MoveStatus.DONE,
+      reason: 'Chuyển hộp vệ sinh đáy hộp tuần hoàn',
+      movedAt: new Date(Date.now() - 3 * 24 * 3600000),
+    });
+  }
+  if (cm3Boxes.length >= 3 && cm1Boxes.length >= 4) {
+    movesData.push({
+      sourceBox: cm3Boxes[0],
+      destBox: cm1Boxes[3],
+      status: MoveStatus.DONE,
+      reason: 'Sang ao sau giai đoạn ươm giống',
+      movedAt: new Date(Date.now() - 2 * 24 * 3600000),
+    });
+    movesData.push({
+      sourceBox: cm3Boxes[1],
+      destBox: cm2Boxes[1],
+      status: MoveStatus.PROCESSING,
+      reason: 'Sang ao nuôi cua thịt thương phẩm',
+      movedAt: new Date(Date.now() - 8 * 3600000),
+    });
+  }
+
+  // Farm Kiên Giang
+  const kg1Boxes = pondBoxesMap['AO-KG-01'] || [];
+  const kg2Boxes = pondBoxesMap['AO-KG-02'] || [];
+  if (kg1Boxes.length >= 2 && kg2Boxes.length >= 2) {
+    movesData.push({
+      sourceBox: kg1Boxes[0],
+      destBox: kg2Boxes[0],
+      status: MoveStatus.DONE,
+      reason: 'Sang ao số 2 điều chỉnh môi trường nuôi',
+      movedAt: new Date(Date.now() - 1 * 24 * 3600000),
+    });
+  }
+
+  for (const move of movesData) {
+    await prisma.stockPickingMove.create({
+      data: {
+        sourceBoxId: move.sourceBox.id,
+        destBoxId: move.destBox.id,
+        status: move.status,
+        reason: move.reason,
+        movedAt: move.movedAt,
       },
     });
   }
