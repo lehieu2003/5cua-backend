@@ -48,8 +48,8 @@ export class FeedingService {
     };
   }
 
-  async getFeedProducts(categoryType?: string) {
-    const products = await this.repo.getProductsByCategory(categoryType);
+  async getFeedProducts(categoryType?: string, isActiveFilter?: boolean) {
+    const products = await this.repo.getProductsByCategory(categoryType, isActiveFilter);
     return products.map((p) => ({
       id: p.id,
       product_id: p.id,
@@ -63,6 +63,9 @@ export class FeedingService {
       category_type: p.category.type,
       uom: p.uom,
       price: p.price,
+      description: p.description,
+      isActive: p.isActive,
+      is_active: p.isActive,
     }));
   }
 

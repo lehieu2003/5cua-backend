@@ -66,10 +66,14 @@ export class FeedingRepository {
     });
   }
 
-  async getProductsByCategory(categoryType?: string) {
+  async getProductsByCategory(categoryType?: string, isActiveFilter?: boolean) {
+    const activeCondition = isActiveFilter !== undefined ? { isActive: isActiveFilter } : {};
+
     if (!categoryType || categoryType === 'all') {
       return prisma.productTemplate.findMany({
-        where: { isActive: true },
+        where: {
+          ...activeCondition,
+        },
         include: { category: true },
         orderBy: { id: 'asc' },
       });
@@ -96,7 +100,7 @@ export class FeedingRepository {
           { category: { type: { in: typeFilters, mode: 'insensitive' } } },
           { category: { code: { in: codeFilters, mode: 'insensitive' } } },
         ],
-        isActive: true,
+        ...activeCondition,
       },
       include: {
         category: true,

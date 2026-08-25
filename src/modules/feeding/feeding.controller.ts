@@ -53,7 +53,18 @@ export class FeedingController {
   async listProducts(req: Request, res: Response) {
     try {
       const categoryType = (req.query.categoryType as string) || (req.query.category as string) || undefined;
-      const products = await this.service.getFeedProducts(categoryType);
+      const includeInactive = req.query.includeInactive === 'true' || req.query.include_inactive === 'true' || req.query.all === 'true';
+
+      let isActiveFilter: boolean | undefined = true;
+      if (includeInactive) {
+        isActiveFilter = undefined;
+      } else if (req.query.isActive !== undefined) {
+        isActiveFilter = req.query.isActive === 'true';
+      } else if (req.query.is_active !== undefined) {
+        isActiveFilter = req.query.is_active === 'true';
+      }
+
+      const products = await this.service.getFeedProducts(categoryType, isActiveFilter);
       return ResponseUtil.success(res, products);
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);
@@ -134,8 +145,18 @@ export class FeedingController {
   async updateProduct(req: Request, res: Response) {
     try {
       const id = parseInt(req.params.id, 10);
-      const { categoryId, category_id, code, name, uom, price, description, isActive } = req.body;
+      if (isNaN(id)) {
+        return ResponseUtil.error(res, 'ID sản phẩm không hợp lệ', 400);
+      }
+
+      const { categoryId, category_id, code, name, uom, price, description } = req.body;
       const catId = categoryId || category_id ? parseInt(categoryId || category_id, 10) : undefined;
+
+      const rawActive = req.body.isActive !== undefined ? req.body.isActive : req.body.is_active;
+      let isActive: boolean | undefined = undefined;
+      if (rawActive !== undefined) {
+        isActive = rawActive === true || rawActive === 'true' || rawActive === 1 || rawActive === '1';
+      }
 
       const product = await this.service.updateProduct(id, {
         categoryId: catId,
@@ -144,7 +165,7 @@ export class FeedingController {
         uom,
         price: price !== undefined ? parseFloat(price) : undefined,
         description,
-        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+        isActive,
       });
 
       return ResponseUtil.success(res, product, 'Cập nhật thành công');
