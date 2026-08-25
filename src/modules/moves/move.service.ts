@@ -12,8 +12,8 @@ export class MoveService {
     };
   }
 
-  async getMoveList() {
-    const moves = await this.repo.getMoveHistory();
+  async getMoveList(farmId?: number, offset = 0) {
+    const moves = await this.repo.getMoveHistory(farmId, offset);
     return moves.map((m) => ({
       id: m.id,
       code: `MOVE-${m.id}`,
@@ -24,6 +24,10 @@ export class MoveService {
       record_id: m.id.toString(),
       status: m.status.toLowerCase(),
     }));
+  }
+
+  async getSummary(farmId?: number) {
+    return this.repo.getSummary(farmId);
   }
 
   async getMoveDetail(id: number) {

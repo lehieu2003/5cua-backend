@@ -103,9 +103,39 @@ export class FarmRepository {
       if (fromDate) where.createdAt.gte = new Date(fromDate);
       if (toDate) where.createdAt.lte = new Date(toDate);
     }
-    return prisma.waterWarning.findMany({
+    const warnings = await prisma.waterWarning.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+    });
+
+    const pondIds = [...new Set(warnings.map((w) => w.pondId))];
+    const ponds = await prisma.pond.findMany({
+      where: { id: { in: pondIds } },
+      select: { id: true, name: true, code: true },
+    });
+    const pondMap = new Map(ponds.map((p) => [p.id, p]));
+
+    return warnings.map((w) => {
+      const pond = pondMap.get(w.pondId);
+      const pondName = pond ? `${pond.name} (${pond.code})` : `Ao #${w.pondId}`;
+      return {
+        id: w.id,
+        farmId: w.farmId,
+        pondId: w.pondId,
+        pond_name: pondName,
+        pondName,
+        title: w.title,
+        warning_name: w.title,
+        warningName: w.title,
+        message: w.message,
+        note: w.message,
+        severity: w.severity,
+        isResolved: w.isResolved,
+        is_resolved: w.isResolved,
+        createdAt: w.createdAt.toISOString(),
+        check_date: w.createdAt.toISOString(),
+        checkDate: w.createdAt.toISOString(),
+      };
     });
   }
 

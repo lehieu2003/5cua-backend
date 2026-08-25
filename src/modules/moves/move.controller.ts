@@ -26,9 +26,11 @@ export class MoveController {
   /**
    * REST: GET /api/v1/moves
    */
-  async listMoves(_req: Request, res: Response) {
+  async listMoves(req: Request, res: Response) {
     try {
-      const moves = await this.service.getMoveList();
+      const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+      const moves = await this.service.getMoveList(farmId, offset);
       return ResponseUtil.success(res, moves);
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);
@@ -38,11 +40,14 @@ export class MoveController {
   /**
    * REST: GET /api/v1/moves/summary
    */
-  async getSummary(_req: Request, res: Response) {
-    return ResponseUtil.success(res, {
-      total_quantity: 120,
-      total_weight: 45.8,
-    });
+  async getSummary(req: Request, res: Response) {
+    try {
+      const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
+      const summary = await this.service.getSummary(farmId);
+      return ResponseUtil.success(res, summary);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
   }
 
   /**

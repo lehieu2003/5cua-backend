@@ -56,15 +56,48 @@ export class MoveRepository {
     });
   }
 
-  async getMoveHistory() {
+  async getMoveHistory(farmId?: number, offset = 0) {
     return prisma.stockPickingMove.findMany({
+      where: farmId
+        ? {
+            sourceBox: {
+              block: {
+                pond: {
+                  farmId,
+                },
+              },
+            },
+          }
+        : undefined,
       include: {
         sourceBox: { include: { block: { include: { pond: true } } } },
         destBox: { include: { block: { include: { pond: true } } } },
       },
       orderBy: { movedAt: 'desc' },
+      skip: offset,
       take: 50,
     });
+  }
+
+  async getSummary(farmId?: number) {
+    const totalMoves = await prisma.stockPickingMove.count({
+      where: farmId
+        ? {
+            sourceBox: {
+              block: {
+                pond: {
+                  farmId,
+                },
+              },
+            },
+          }
+        : undefined,
+    });
+
+    return {
+      total_quantity: totalMoves,
+      total_weight: parseFloat((totalMoves * 0.45).toFixed(1)),
+    };
   }
 
   async findById(id: number) {
