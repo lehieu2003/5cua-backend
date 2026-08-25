@@ -1,17 +1,33 @@
 import prisma from '../../database/prisma.service';
 
 export class FarmRepository {
-  async findAll() {
+  async findAll(userId?: number, isSuperAdmin = false) {
+    const where: any = { isActive: true };
+    if (!isSuperAdmin && userId) {
+      where.members = {
+        some: {
+          userId,
+        },
+      };
+    }
     return prisma.farm.findMany({
-      where: { isActive: true },
+      where,
       select: {
         id: true,
         code: true,
         name: true,
         address: true,
         description: true,
+        isActive: true,
         createdAt: true,
+        members: {
+          where: userId ? { userId } : undefined,
+          select: {
+            role: true,
+          },
+        },
       },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
+import { authGuard } from '../../common/guards/auth.guard';
 import { farmController } from './farm.controller';
 
 const router = Router();
@@ -9,12 +10,14 @@ const router = Router();
  * /api/v1/farms:
  *   get:
  *     tags: [Farms]
- *     summary: Danh sách trang trại
+ *     summary: Danh sách trang trại của người dùng
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Danh sách farms
  */
-router.get('/api/v1/farms', asyncHandler((req, res) => farmController.getAllFarms(req, res)));
+router.get('/api/v1/farms', authGuard, asyncHandler((req, res) => farmController.getAllFarms(req, res)));
 
 /**
  * @openapi
