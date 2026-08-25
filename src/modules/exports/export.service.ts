@@ -1,3 +1,4 @@
+import prisma from '../../database/prisma.service';
 import { exportRepository, ExportRepository } from './export.repository';
 import { CreateExportDto } from './export.dto';
 
@@ -41,15 +42,40 @@ export class ExportService {
   async getExportDetail(id: number) {
     const exp = await this.repo.findById(id);
     if (!exp) throw new Error('Không tìm thấy phiếu xuất bán');
+
+    // Look up product if any box has productId
+    let crabTypeName = 'Cua thương phẩm (Loại 1)';
+    if (exp.boxes && exp.boxes.length > 0 && exp.boxes[0].productId) {
+      const product = await prisma.productTemplate.findUnique({
+        where: { id: exp.boxes[0].productId },
+      });
+      if (product) {
+        crabTypeName = product.name;
+      }
+    }
+
+    const pricePerUnit = exp.totalWeight > 0 ? Math.round(exp.totalAmount / exp.totalWeight) : 0;
+
     return {
       id: exp.id,
       code: exp.code,
       name: exp.code,
       export_date: exp.exportDate.toISOString(),
       partner_name: exp.partnerName || '',
+      crab_type: crabTypeName,
+      type_kind: crabTypeName,
       total_quantity: exp.totalQty,
+      quantity: exp.totalQty,
+      dead_quantity: 0,
       total_weight: exp.totalWeight,
+      weight: exp.totalWeight,
+      dead_weight: 0,
       total_amount: exp.totalAmount,
+      total_price: exp.totalAmount,
+      real_price: exp.totalAmount,
+      price_per_unit: pricePerUnit,
+      type: 'export_sell',
+      reason: 'Xuất bán',
       status: exp.status.toLowerCase(),
       note: exp.note || '',
       boxes: exp.boxes,
