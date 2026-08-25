@@ -41,24 +41,21 @@ const router = Router();
 router.get('/api/v1/feeding', asyncHandler((req, res) => feedingController.listFeeding(req, res)));
 router.post('/api/v1/feeding', asyncHandler((req, res) => feedingController.createFeeding(req, res)));
 
-/**
- * @openapi
- * /api/v1/feeding/products:
- *   get:
- *     tags: [Feeding & Probiotic]
- *     summary: Danh sách sản phẩm thức ăn / vi sinh
- *     parameters:
- *       - in: query
- *         name: categoryType
- *         schema:
- *           type: string
- *           enum: [feed, probiotic]
- *           default: feed
- *     responses:
- *       200:
- *         description: Danh sách sản phẩm
- */
+import { authGuard } from '../../common/guards/auth.guard';
+import { roleGuard } from '../../common/guards/role.guard';
+
+// Categories
+router.get('/api/v1/feeding/categories', asyncHandler((req, res) => feedingController.listCategories(req, res)));
+router.post('/api/v1/feeding/categories', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => feedingController.createCategory(req, res)));
+
+// Products
 router.get('/api/v1/feeding/products', asyncHandler((req, res) => feedingController.listProducts(req, res)));
+router.get('/api/v1/feeding/products/:id', asyncHandler((req, res) => feedingController.getProduct(req, res)));
+router.post('/api/v1/feeding/products', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => feedingController.createProduct(req, res)));
+router.put('/api/v1/feeding/products/:id', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => feedingController.updateProduct(req, res)));
+router.delete('/api/v1/feeding/products/:id', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => feedingController.deleteProduct(req, res)));
+
+// Statuses
 router.get('/api/v1/feeding/status', asyncHandler((req, res) => feedingController.getFeedingStatuses(req, res)));
 router.get('/api/v1/feeding/shapes', asyncHandler((req, res) => feedingController.getShapeStatuses(req, res)));
 

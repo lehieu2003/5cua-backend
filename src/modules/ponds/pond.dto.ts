@@ -17,7 +17,7 @@ export const FilterBoxSchema = z.object({
   blockId: z.string().optional(),
   row: z.number().optional(),
   column: z.number().optional(),
-  status: z.enum(['occupied', 'empty']).optional(),
+  status: z.string().optional(),
   productId: z.number().optional(),
   feedId: z.number().optional(),
   shapeId: z.number().optional(),

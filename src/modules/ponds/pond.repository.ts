@@ -114,16 +114,27 @@ export class PondRepository {
     blockId?: string;
     row?: number;
     column?: number;
-    status?: 'occupied' | 'empty';
+    status?: string;
     productId?: number;
     feedId?: number;
     shapeId?: number;
   }) {
-    const dbStatus = params.status
-      ? params.status.toLowerCase() === 'occupied'
-        ? BoxStatus.OCCUPIED
-        : BoxStatus.EMPTY
-      : undefined;
+    let statusFilter: any = undefined;
+    if (params.status) {
+      const rawStatuses = params.status.toLowerCase().split(',').map((s) => s.trim());
+      const mappedStatuses: BoxStatus[] = [];
+      for (const s of rawStatuses) {
+        if (s === 'occupied') mappedStatuses.push(BoxStatus.OCCUPIED);
+        else if (s === 'empty') mappedStatuses.push(BoxStatus.EMPTY);
+        else if (s === 'maintenance') mappedStatuses.push(BoxStatus.MAINTENANCE);
+        else if (s === 'cleaning') mappedStatuses.push(BoxStatus.CLEANING);
+      }
+      if (mappedStatuses.length === 1) {
+        statusFilter = mappedStatuses[0];
+      } else if (mappedStatuses.length > 1) {
+        statusFilter = { in: mappedStatuses };
+      }
+    }
 
     return prisma.box.findMany({
       where: {
@@ -133,7 +144,7 @@ export class PondRepository {
         },
         ...(params.row && { row: params.row }),
         ...(params.column && { column: params.column }),
-        ...(dbStatus && { status: dbStatus }),
+        ...(statusFilter && { status: statusFilter }),
         ...(params.productId && { productId: params.productId }),
         ...(params.feedId && { feedStatusId: params.feedId }),
         ...(params.shapeId && { shapeStatusId: params.shapeId }),

@@ -48,17 +48,92 @@ export class FeedingService {
     };
   }
 
-  async getFeedProducts(categoryType: string) {
+  async getFeedProducts(categoryType?: string) {
     const products = await this.repo.getProductsByCategory(categoryType);
     return products.map((p) => ({
       id: p.id,
       product_id: p.id,
+      product_service_id: p.code,
       name: p.name,
       product_name: p.name,
+      code: p.code,
       product_category: p.category.name,
+      category_id: p.categoryId,
+      category_name: p.category.name,
+      category_type: p.category.type,
       uom: p.uom,
       price: p.price,
     }));
+  }
+
+  async getCategories() {
+    return this.repo.getAllCategories();
+  }
+
+  async createCategory(data: { code: string; name: string; type: string }) {
+    return this.repo.createCategory(data);
+  }
+
+  async getProduct(id: number) {
+    const p = await this.repo.findProductById(id);
+    if (!p) throw new Error('Sản phẩm không tồn tại');
+    return {
+      id: p.id,
+      product_id: p.id,
+      product_service_id: p.code,
+      name: p.name,
+      product_name: p.name,
+      code: p.code,
+      product_category: p.category.name,
+      category_id: p.categoryId,
+      category_name: p.category.name,
+      category_type: p.category.type,
+      uom: p.uom,
+      price: p.price,
+      description: p.description,
+      isActive: p.isActive,
+    };
+  }
+
+  async createProduct(data: {
+    categoryId: number;
+    code: string;
+    name: string;
+    uom?: string;
+    price?: number;
+    description?: string;
+    isActive?: boolean;
+  }) {
+    const existing = await this.repo.findProductByCode(data.code);
+    if (existing) {
+      throw new Error(`Mã sản phẩm/giống '${data.code}' đã tồn tại.`);
+    }
+    return this.repo.createProduct(data);
+  }
+
+  async updateProduct(
+    id: number,
+    data: {
+      categoryId?: number;
+      code?: string;
+      name?: string;
+      uom?: string;
+      price?: number;
+      description?: string;
+      isActive?: boolean;
+    }
+  ) {
+    if (data.code) {
+      const existing = await this.repo.findProductByCode(data.code);
+      if (existing && existing.id !== id) {
+        throw new Error(`Mã sản phẩm/giống '${data.code}' đã thuộc về một sản phẩm khác.`);
+      }
+    }
+    return this.repo.updateProduct(id, data);
+  }
+
+  async deleteProduct(id: number) {
+    return this.repo.deleteProduct(id);
   }
 
   async getFeedingStatuses() {
@@ -71,3 +146,4 @@ export class FeedingService {
 }
 
 export const feedingService = new FeedingService();
+

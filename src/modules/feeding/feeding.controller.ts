@@ -52,11 +52,117 @@ export class FeedingController {
    */
   async listProducts(req: Request, res: Response) {
     try {
-      const categoryType = (req.query.categoryType as string) || (req.query.category as string) || 'feed';
+      const categoryType = (req.query.categoryType as string) || (req.query.category as string) || undefined;
       const products = await this.service.getFeedProducts(categoryType);
       return ResponseUtil.success(res, products);
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: GET /api/v1/feeding/categories
+   */
+  async listCategories(req: Request, res: Response) {
+    try {
+      const categories = await this.service.getCategories();
+      return ResponseUtil.success(res, categories);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: POST /api/v1/feeding/categories
+   */
+  async createCategory(req: Request, res: Response) {
+    try {
+      const { code, name, type } = req.body;
+      if (!code || !name) {
+        return ResponseUtil.error(res, 'Mã và tên danh mục là bắt buộc', 400);
+      }
+      const cat = await this.service.createCategory({ code, name, type: type || 'type' });
+      return ResponseUtil.success(res, cat, 'Tạo danh mục thành công', 201);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
+  }
+
+  /**
+   * REST: GET /api/v1/feeding/products/:id
+   */
+  async getProduct(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const product = await this.service.getProduct(id);
+      return ResponseUtil.success(res, product);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, 404);
+    }
+  }
+
+  /**
+   * REST: POST /api/v1/feeding/products
+   */
+  async createProduct(req: Request, res: Response) {
+    try {
+      const { categoryId, category_id, code, name, uom, price, description, isActive } = req.body;
+      const catId = parseInt(categoryId || category_id, 10);
+      if (!catId || !code || !name) {
+        return ResponseUtil.error(res, 'Danh mục, mã và tên sản phẩm/giống cua là bắt buộc', 400);
+      }
+
+      const product = await this.service.createProduct({
+        categoryId: catId,
+        code,
+        name,
+        uom: uom || 'con',
+        price: price ? parseFloat(price) : 0,
+        description,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+      });
+
+      return ResponseUtil.success(res, product, 'Tạo sản phẩm/giống cua thành công', 201);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, 400);
+    }
+  }
+
+  /**
+   * REST: PUT /api/v1/feeding/products/:id
+   */
+  async updateProduct(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const { categoryId, category_id, code, name, uom, price, description, isActive } = req.body;
+      const catId = categoryId || category_id ? parseInt(categoryId || category_id, 10) : undefined;
+
+      const product = await this.service.updateProduct(id, {
+        categoryId: catId,
+        code,
+        name,
+        uom,
+        price: price !== undefined ? parseFloat(price) : undefined,
+        description,
+        isActive: isActive !== undefined ? Boolean(isActive) : undefined,
+      });
+
+      return ResponseUtil.success(res, product, 'Cập nhật thành công');
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, 400);
+    }
+  }
+
+  /**
+   * REST: DELETE /api/v1/feeding/products/:id
+   */
+  async deleteProduct(req: Request, res: Response) {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await this.service.deleteProduct(id);
+      return ResponseUtil.success(res, null, 'Xóa/Hủy kích hoạt sản phẩm thành công');
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, 400);
     }
   }
 
@@ -80,3 +186,4 @@ export class FeedingController {
 }
 
 export const feedingController = new FeedingController();
+
