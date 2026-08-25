@@ -192,6 +192,12 @@ export class BatchRepository {
     });
   }
 
+  async findByCode(code: string) {
+    return prisma.stockImportBatch.findUnique({
+      where: { code },
+    });
+  }
+
   async updateStatus(id: number, status: string | BatchStatus) {
     let dbStatus: BatchStatus = BatchStatus.IN_PROGRESS;
     const s = (status || '').toString().toUpperCase().trim();

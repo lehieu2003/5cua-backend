@@ -50,7 +50,13 @@ export const MESSAGES = {
     CREATE_SUCCESS: 'Tạo đợt nhập thành công',
     UPDATE_SUCCESS: 'Cập nhật đợt nhập thành công',
     NOT_FOUND: 'Không tìm thấy thông tin đợt nhập',
+    CODE_EXISTS: 'Mã đợt nhập đã tồn tại trong hệ thống, vui lòng chọn mã khác',
+    PRODUCT_NOT_FOUND: 'Loại sản phẩm/cua được chọn không tồn tại',
+    FARM_NOT_FOUND: 'Không tìm thấy thông tin trang trại',
     INVALID_BOXES: 'Danh sách hộp phân bổ không hợp lệ',
+    BOX_ALREADY_OCCUPIED: 'Một số hộp nuôi đã có cua (đang sử dụng), vui lòng chọn hộp trống khác',
+    QUANTITY_REQUIRED: 'Số lượng ban đầu phải lớn hơn 0',
+    WEIGHT_REQUIRED: 'Khối lượng ban đầu phải lớn hơn 0',
   },
 
   // ── Cho ăn & Vi sinh ────────────────────────────────────────────

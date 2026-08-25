@@ -21,6 +21,7 @@ export const globalErrorHandler = (
   // Operational error — Lỗi nghiệp vụ đã kiểm soát được
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
+      success: false,
       status: 'error',
       code: err.statusCode,
       message: err.message,
@@ -33,17 +34,19 @@ export const globalErrorHandler = (
     const target = (err as any).meta?.target;
     let message: string = MESSAGES.SYSTEM.UNIQUE_VIOLATION;
 
-    if (Array.isArray(target)) {
-      if (target.includes('phone')) message = MESSAGES.AUTH.PHONE_EXISTS;
-      else if (target.includes('email')) message = MESSAGES.AUTH.EMAIL_EXISTS;
-      else if (target.includes('username')) message = MESSAGES.AUTH.USERNAME_EXISTS;
-    } else if (typeof target === 'string') {
-      if (target.includes('phone')) message = MESSAGES.AUTH.PHONE_EXISTS;
-      else if (target.includes('email')) message = MESSAGES.AUTH.EMAIL_EXISTS;
-      else if (target.includes('username')) message = MESSAGES.AUTH.USERNAME_EXISTS;
-    }
+    const checkField = (field: string) => {
+      if (Array.isArray(target)) return target.includes(field);
+      if (typeof target === 'string') return target.includes(field);
+      return false;
+    };
+
+    if (checkField('phone')) message = MESSAGES.AUTH.PHONE_EXISTS;
+    else if (checkField('email')) message = MESSAGES.AUTH.EMAIL_EXISTS;
+    else if (checkField('username')) message = MESSAGES.AUTH.USERNAME_EXISTS;
+    else if (checkField('code')) message = MESSAGES.BATCH.CODE_EXISTS;
 
     res.status(409).json({
+      success: false,
       status: 'error',
       code: 409,
       message,
@@ -53,6 +56,7 @@ export const globalErrorHandler = (
 
   if ((err as any).code === 'P2025') {
     res.status(404).json({
+      success: false,
       status: 'error',
       code: 404,
       message: MESSAGES.SYSTEM.RECORD_NOT_FOUND,
@@ -62,17 +66,18 @@ export const globalErrorHandler = (
 
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
-    res.status(401).json({ status: 'error', code: 401, message: MESSAGES.SYSTEM.TOKEN_INVALID });
+    res.status(401).json({ success: false, status: 'error', code: 401, message: MESSAGES.SYSTEM.TOKEN_INVALID });
     return;
   }
 
   if (err.name === 'TokenExpiredError') {
-    res.status(401).json({ status: 'error', code: 401, message: MESSAGES.SYSTEM.TOKEN_EXPIRED });
+    res.status(401).json({ success: false, status: 'error', code: 401, message: MESSAGES.SYSTEM.TOKEN_EXPIRED });
     return;
   }
 
   // Unknown / Programmer error
   res.status(500).json({
+    success: false,
     status: 'error',
     code: 500,
     message: env.isDev ? err.message : MESSAGES.SYSTEM.INTERNAL_ERROR,
