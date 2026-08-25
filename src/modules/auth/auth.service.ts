@@ -203,6 +203,10 @@ export class AuthService {
     await this.repo.updatePassword(userId, newHash);
     return { success: true };
   }
+
+  async listUsers(farmId?: number) {
+    return this.repo.findAllUsers(farmId);
+  }
 }
 
 export const authService = new AuthService();
