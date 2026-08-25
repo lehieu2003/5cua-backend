@@ -44,6 +44,15 @@ export class BatchRepository {
       include: {
         product: true,
         images: true,
+        boxes: {
+          include: {
+            block: {
+              include: {
+                pond: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { importDate: 'desc' },
       skip: params.offset || 0,

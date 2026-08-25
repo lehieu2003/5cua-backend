@@ -44,6 +44,78 @@ export class BatchService {
         name: `image_${img.id}`,
         imageUrl: img.imageUrl,
       })),
+      warehouses: this.formatWarehousesFromBoxes((b as any).boxes),
+    }));
+  }
+
+  private formatWarehousesFromBoxes(boxes?: any[]): any[] {
+    if (!boxes || boxes.length === 0) return [];
+
+    const pondMap = new Map<number, {
+      id: number;
+      name: string;
+      type: string;
+      product_uom_qty: number;
+      blockMap: Map<number, {
+        id: number;
+        name: string;
+        code?: string;
+        quantity: number;
+        locations: Array<{ id: number; name: string; code?: string; quantity: number }>;
+      }>;
+    }>();
+
+    for (const box of boxes) {
+      if (!box.block || !box.block.pond) continue;
+
+      const pond = box.block.pond;
+      const block = box.block;
+
+      if (!pondMap.has(pond.id)) {
+        pondMap.set(pond.id, {
+          id: pond.id,
+          name: pond.name,
+          type: pond.type || 'COMPOUND',
+          product_uom_qty: 0,
+          blockMap: new Map(),
+        });
+      }
+
+      const pondData = pondMap.get(pond.id)!;
+      pondData.product_uom_qty += 1;
+
+      if (!pondData.blockMap.has(block.id)) {
+        pondData.blockMap.set(block.id, {
+          id: block.id,
+          name: block.name || `Dãy ${block.code || block.id}`,
+          code: block.code,
+          quantity: 0,
+          locations: [],
+        });
+      }
+
+      const blockData = pondData.blockMap.get(block.id)!;
+      blockData.quantity += 1;
+      blockData.locations.push({
+        id: box.id,
+        name: box.code || `Hộp ${box.id}`,
+        code: box.code,
+        quantity: 1,
+      });
+    }
+
+    return Array.from(pondMap.values()).map((p) => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      product_uom_qty: p.product_uom_qty,
+      blocks: Array.from(p.blockMap.values()).map((b) => ({
+        id: b.id,
+        name: b.name,
+        code: b.code,
+        quantity: b.quantity,
+        locations: b.locations,
+      })),
     }));
   }
 
@@ -182,6 +254,7 @@ export class BatchService {
         name: `image_${img.id}`,
         imageUrl: img.imageUrl,
       })),
+      warehouses: this.formatWarehousesFromBoxes(b.boxes),
     };
   }
 
