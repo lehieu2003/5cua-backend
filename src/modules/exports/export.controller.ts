@@ -11,7 +11,7 @@ export class ExportController {
    */
   async listExports(req: Request, res: Response) {
     try {
-      const farmId = req.query.farmId ? parseInt(req.query.farmId as string, 10) : undefined;
+      const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
 
       const data = await this.service.getExportList(farmId, offset);
@@ -36,11 +36,14 @@ export class ExportController {
   /**
    * REST: GET /api/v1/exports/summary
    */
-  async getSummary(_req: Request, res: Response) {
-    return ResponseUtil.success(res, {
-      total_quantity: 85,
-      total_weight: 32.5,
-    });
+  async getSummary(req: Request, res: Response) {
+    try {
+      const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
+      const summary = await this.service.getSummary(farmId);
+      return ResponseUtil.success(res, summary);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message);
+    }
   }
 
   /**

@@ -103,6 +103,25 @@ router.put('/api/v1/users/me', authGuard, validate(UpdateProfileSchema), asyncHa
 
 /**
  * @openapi
+ * /api/v1/users:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Danh sách người dùng hệ thống
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: farmId
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Danh sách users
+ */
+router.get('/api/v1/users', authGuard, asyncHandler((req, res) => authController.listUsers(req, res)));
+
+/**
+ * @openapi
  * /api/v1/auth/change-password:
  *   post:
  *     tags: [Auth]

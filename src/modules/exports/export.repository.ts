@@ -95,6 +95,30 @@ export class ExportRepository {
       data: { status: dbStatus },
     });
   }
+
+  async getSummary(farmId?: number) {
+    const exports = await prisma.exportHistory.findMany({
+      where: {
+        ...(farmId && { farmId }),
+      },
+      select: {
+        totalQty: true,
+        totalWeight: true,
+      },
+    });
+
+    let total_quantity = 0;
+    let total_weight = 0;
+    for (const e of exports) {
+      total_quantity += e.totalQty;
+      total_weight += e.totalWeight;
+    }
+
+    return {
+      total_quantity,
+      total_weight,
+    };
+  }
 }
 
 export const exportRepository = new ExportRepository();

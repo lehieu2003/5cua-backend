@@ -115,6 +115,56 @@ export class AuthRepository {
       },
     });
   }
+
+  async findAllUsers(farmId?: number) {
+    const where: any = {};
+    if (farmId) {
+      where.farmMembers = {
+        some: {
+          farmId,
+        },
+      };
+    }
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        memberType: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        farmMembers: {
+          include: {
+            farm: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return users.map((u) => {
+      const primaryFarmMember = u.farmMembers?.[0];
+      const role =
+        u.memberType === 'ADMIN'
+          ? UserRole.SUPER_ADMIN
+          : primaryFarmMember?.role || UserRole.WORKER;
+      return {
+        ...u,
+        role,
+      };
+    });
+  }
 }
 
 export const authRepository = new AuthRepository();

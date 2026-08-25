@@ -82,6 +82,19 @@ export class AuthController {
       return ResponseUtil.error(res, error.message, error.statusCode || 400);
     }
   }
+
+  /**
+   * RESTful List Users: GET /api/v1/users
+   */
+  async listUsers(req: Request, res: Response) {
+    try {
+      const farmId = req.query.farmId ? parseInt(req.query.farmId as string, 10) : undefined;
+      const users = await this.service.listUsers(farmId);
+      return ResponseUtil.success(res, users);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+    }
+  }
 }
 
 export const authController = new AuthController();

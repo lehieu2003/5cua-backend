@@ -4,8 +4,9 @@ import { CreateFarmDto } from './farm.dto';
 export class FarmService {
   constructor(private readonly repo: FarmRepository = farmRepository) {}
 
-  async getAllFarms() {
-    return this.repo.findAll();
+  async getAllFarms(userId?: number, role?: string, memberType?: string) {
+    const isSuperAdmin = role === 'SUPER_ADMIN' || memberType === 'admin' || memberType === 'ADMIN';
+    return this.repo.findAll(userId, isSuperAdmin);
   }
 
   async getFarmDetail(farmId: number) {

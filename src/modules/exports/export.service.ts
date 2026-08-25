@@ -59,6 +59,10 @@ export class ExportService {
   async updateExportStatus(id: number, status: string) {
     return this.repo.updateStatus(id, status.toUpperCase() as any);
   }
+
+  async getSummary(farmId?: number) {
+    return this.repo.getSummary(farmId);
+  }
 }
 
 export const exportService = new ExportService();

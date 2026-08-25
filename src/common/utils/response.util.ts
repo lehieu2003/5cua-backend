@@ -6,6 +6,7 @@ export class ResponseUtil {
    */
   static success(res: Response, data: any, message = 'Success', code = 200) {
     return res.status(code).json({
+      success: true,
       status: 'success',
       code,
       message,
@@ -18,6 +19,7 @@ export class ResponseUtil {
    */
   static error(res: Response, message = 'Error', code = 400, details: any = null) {
     return res.status(code).json({
+      success: false,
       status: 'error',
       code,
       message,
@@ -35,6 +37,7 @@ export class ResponseUtil {
     message = 'Success'
   ) {
     return res.status(200).json({
+      success: true,
       status: 'success',
       code: 200,
       message,

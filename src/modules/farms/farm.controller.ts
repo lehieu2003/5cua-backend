@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { farmService, FarmService } from './farm.service';
 import { ResponseUtil } from '../../common/utils/response.util';
+import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 
 export class FarmController {
   constructor(private readonly service: FarmService = farmService) {}
@@ -8,9 +9,12 @@ export class FarmController {
   /**
    * REST: GET /api/v1/farms
    */
-  async getAllFarms(req: Request, res: Response) {
+  async getAllFarms(req: AuthenticatedRequest, res: Response) {
     try {
-      const farms = await this.service.getAllFarms();
+      const userId = req.user?.userId;
+      const role = req.user?.role;
+      const memberType = req.user?.memberType;
+      const farms = await this.service.getAllFarms(userId, role, memberType);
       return ResponseUtil.success(res, farms);
     } catch (error: any) {
       return ResponseUtil.error(res, error.message);
