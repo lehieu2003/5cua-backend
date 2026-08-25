@@ -10,7 +10,10 @@ export class PondService {
     // Chuyển đổi sang format PondModel hoàn chỉnh 100% khớp với Flutter Dart
     return ponds.map((p) => {
       let occupiedCount = 0;
-      const productQuantMap = new Map<number, { id: number; name: string; count: number }>();
+      const productQuantMap = new Map<
+        number,
+        { id: number; name: string; count: number }
+      >();
 
       for (const block of p.blocks) {
         for (const box of block.boxes) {
@@ -35,14 +38,14 @@ export class PondService {
         quant: item.count,
       }));
 
-      const percentAchieved = p.totalBox > 0 ? (occupiedCount / p.totalBox) * 100 : 0;
+      const percentAchieved =
+        p.totalBox > 0 ? (occupiedCount / p.totalBox) * 100 : 0;
 
       return {
         id: p.id,
         location_id: p.id,
         name: p.name,
         code: p.code,
-        pondType: p.pondType || 'box_grid',
         pond_type: p.pondType || 'box_grid',
         num_block: p.numBlock,
         num_row: p.numRow,
@@ -68,7 +71,10 @@ export class PondService {
     if (!pond) throw new Error('Không tìm thấy thông tin ao nuôi');
 
     let occupiedCount = 0;
-    const productQuantMap = new Map<number, { id: number; name: string; count: number }>();
+    const productQuantMap = new Map<
+      number,
+      { id: number; name: string; count: number }
+    >();
 
     for (const block of pond.blocks) {
       for (const box of block.boxes) {
