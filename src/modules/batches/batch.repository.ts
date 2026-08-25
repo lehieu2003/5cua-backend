@@ -142,7 +142,7 @@ export class BatchRepository {
           expectedRevenue: data.expectedRevenue,
           expectedSuccessRate: data.expectedSuccessRate,
           note: data.note,
-          status: BatchStatus.IN_PROGRESS,
+          status: BatchStatus.DRAFT,
         },
       });
 
@@ -199,15 +199,15 @@ export class BatchRepository {
   }
 
   async updateStatus(id: number, status: string | BatchStatus) {
-    let dbStatus: BatchStatus = BatchStatus.IN_PROGRESS;
+    let dbStatus: BatchStatus = BatchStatus.DRAFT;
     const s = (status || '').toString().toUpperCase().trim();
-    if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING') {
+    if (s === 'ACTIVE' || s === 'IN_PROGRESS' || s === 'PROCESSING' || s === 'ĐANG NUÔI' || s === 'DANG NUOI') {
       dbStatus = BatchStatus.IN_PROGRESS;
-    } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED') {
+    } else if (s === 'COMPLETED' || s === 'DONE' || s === 'CLOSED' || s === 'FINISHED' || s === 'THU HOẠCH' || s === 'THU HOACH') {
       dbStatus = BatchStatus.COMPLETED;
-    } else if (s === 'DRAFT') {
+    } else if (s === 'DRAFT' || s === 'NEW' || s === 'MỚI' || s === 'MOI') {
       dbStatus = BatchStatus.DRAFT;
-    } else if (s === 'CANCELLED' || s === 'CANCELED') {
+    } else if (s === 'CANCELLED' || s === 'CANCELED' || s === 'ĐÃ HỦY' || s === 'DA HUY') {
       dbStatus = BatchStatus.CANCELLED;
     }
 
