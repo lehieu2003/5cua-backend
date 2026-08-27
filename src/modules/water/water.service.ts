@@ -1,5 +1,6 @@
 import { waterRepository, WaterRepository } from './water.repository';
 import { AddWaterCheckDto } from './water.dto';
+import { AppError } from '@/common/errors/app.error';
 
 export class WaterService {
   constructor(private readonly repo: WaterRepository = waterRepository) {}
@@ -24,7 +25,8 @@ export class WaterService {
   }
 
   async addWaterCheck(dto: any) {
-    const rawPondId = dto.pondId || dto.warehouseId || dto.pond_id || dto.warehouse_id;
+    const rawPondId =
+      dto.pondId || dto.warehouseId || dto.pond_id || dto.warehouse_id;
     if (!rawPondId) {
       throw AppError.badRequest('Vui lòng chọn ao/kho nuôi cần đo nước');
     }
@@ -33,9 +35,14 @@ export class WaterService {
     const paramById = new Map(params.map((p) => [p.id, p]));
     const paramByCode = new Map(params.map((p) => [p.code.toLowerCase(), p]));
 
-    const checkList: any[] = dto.items || dto.waterChecks || dto.water_checks || [];
+    const checkList: any[] =
+      dto.items || dto.waterChecks || dto.water_checks || [];
     let hasWarning = false;
-    const warningsToCreate: Array<{ title: string; message: string; severity: string }> = [];
+    const warningsToCreate: Array<{
+      title: string;
+      message: string;
+      severity: string;
+    }> = [];
 
     const items = checkList.map((chk: any) => {
       let p = chk.parameterId ? paramById.get(chk.parameterId) : undefined;
@@ -44,7 +51,9 @@ export class WaterService {
       }
 
       if (!p && !chk.parameterId) {
-        throw AppError.badRequest('Thông số đo nước không tồn tại hoặc không hợp lệ');
+        throw AppError.badRequest(
+          'Thông số đo nước không tồn tại hoặc không hợp lệ',
+        );
       }
 
       let isWarn = false;

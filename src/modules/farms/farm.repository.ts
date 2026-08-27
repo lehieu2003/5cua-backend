@@ -50,6 +50,20 @@ export class FarmRepository {
   }
 
   async getOverviewStats(farmId: number) {
+    const farm = await prisma.farm.findUnique({
+      where: { id: farmId },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        address: true,
+        description: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
     const ponds = await prisma.pond.findMany({
       where: { farmId },
       include: {
@@ -63,35 +77,66 @@ export class FarmRepository {
 
     let totalBoxes = 0;
     let occupiedBoxes = 0;
-    let softShellCount = 0;
-    let deadCount = 0;
+    let emptyBoxes = 0;
+    let maintenanceBoxes = 0;
+    let cleaningBoxes = 0;
 
     for (const pond of ponds) {
       for (const block of pond.blocks) {
         for (const box of block.boxes) {
           totalBoxes++;
-          if (box.status === 'OCCUPIED') {
-            occupiedBoxes++;
-          }
+          if (box.status === 'OCCUPIED') occupiedBoxes++;
+          else if (box.status === 'MAINTENANCE') maintenanceBoxes++;
+          else if (box.status === 'CLEANING') cleaningBoxes++;
+          else emptyBoxes++;
         }
       }
     }
 
-    const warnings = await prisma.waterWarning.count({
+    const activeBatchesCount = await prisma.stockImportBatch.count({
+      where: { farmId, status: 'IN_PROGRESS' },
+    });
+
+    const warningsCount = await prisma.waterWarning.count({
       where: { farmId, isResolved: false },
     });
 
+    const recentWarnings = await this.findWarnings(farmId);
+    const recentOperations = await this.findOperations(farmId);
+
+    const exports = await prisma.exportHistory.findMany({
+      where: { farmId, status: 'DONE' },
+      select: { totalAmount: true },
+    });
+    const monthlyExportRevenue = exports.reduce((sum, e) => sum + (e.totalAmount || 0), 0);
+
     return {
+      farm,
+      statistics: {
+        totalPonds: ponds.length,
+        totalBoxes,
+        occupiedBoxes,
+        emptyBoxes,
+        maintenanceBoxes,
+        cleaningBoxes,
+        activeBatchesCount,
+        unresolvedWarningsCount: warningsCount,
+        monthlyExportRevenue,
+      },
+      recentWarnings: recentWarnings.slice(0, 5),
+      recentActivities: (recentOperations.data || []).slice(0, 5),
+
+      // Mobile compatibility fields
       farm_id: farmId,
       total_pond: ponds.length,
       total_box: totalBoxes,
       occupied_box: occupiedBoxes,
       total_crab: occupiedBoxes,
-      soft_shell_quantity: softShellCount,
-      dead_quantity: deadCount,
-      warning_water_count: warnings,
+      soft_shell_quantity: 0,
+      dead_quantity: 0,
+      warning_water_count: warningsCount,
       total: occupiedBoxes,
-      total_dead: deadCount,
+      total_dead: 0,
       total_est: occupiedBoxes,
     };
   }
