@@ -195,6 +195,86 @@ async function runRoleTests() {
     const isOwnerStandard = profileOwner.body.data?.memberType === 'standard';
     assertTest('FARM_OWNER', `Profile có member_type == "standard" (${isOwnerStandard})`, 200, profileOwner.status, profileOwner.body);
 
+    // 8. Test Đăng nhập với tài khoản bị khóa (isActive = false)
+    console.log('\n🔒 7. Test Đăng nhập với tài khoản bị khóa (isActive = false):');
+    const workerUser = await prisma.user.findUnique({ where: { username: 'test_worker' } });
+    if (workerUser) {
+      // Khóa tài khoản
+      await prisma.user.update({
+        where: { id: workerUser.id },
+        data: { isActive: false },
+      });
+
+      // Thử đăng nhập tài khoản đã khóa
+      const blockedLoginRes = await request({
+        method: 'POST',
+        path: '/api/v1/auth/login',
+        body: { username: 'test_worker', password: 'Password@123' },
+      });
+      assertTest('BLOCKED_USER', 'Đăng nhập tài khoản bị khóa -> Bị chặn 403', 403, blockedLoginRes.status, blockedLoginRes.body);
+
+      // Mở khóa lại tài khoản
+      await prisma.user.update({
+        where: { id: workerUser.id },
+        data: { isActive: true },
+      });
+
+      // Đăng nhập lại sau khi mở khóa
+      const unblockedLoginRes = await request({
+        method: 'POST',
+        path: '/api/v1/auth/login',
+        body: { username: 'test_worker', password: 'Password@123' },
+      });
+      assertTest('UNBLOCKED_USER', 'Đăng nhập lại sau khi mở khóa -> Thành công 200', 200, unblockedLoginRes.status, unblockedLoginRes.body);
+
+      // 9. Test Real-time SSE thông báo khi Admin khóa tài khoản
+      console.log('\n📡 8. Test Real-time SSE khi Admin khóa tài khoản (Force Logout):');
+      const workerToken = unblockedLoginRes.body.data?.accessToken;
+      let sseReceivedDeactivation = false;
+
+      const sseReq = http.request({
+        hostname: '127.0.0.1',
+        port: PORT,
+        path: `/api/v1/auth/events?token=${workerToken}`,
+        method: 'GET',
+        headers: {
+          Accept: 'text/event-stream',
+        },
+      }, (sseRes) => {
+        sseRes.on('data', (chunk) => {
+          const str = chunk.toString();
+          if (str.includes('ACCOUNT_DEACTIVATED')) {
+            sseReceivedDeactivation = true;
+          }
+        });
+      });
+      sseReq.end();
+
+      // Đợi kết nối SSE mở
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Admin khóa tài khoản qua API PATCH /api/v1/users/:id/status
+      const lockRes = await request({
+        method: 'PATCH',
+        path: `/api/v1/users/${workerUser.id}/status`,
+        token: tokens['FARM_OWNER'],
+        body: { isActive: false },
+      });
+      assertTest('ADMIN_LOCK', 'Admin gọi API khóa tài khoản user -> Thành công 200', 200, lockRes.status, lockRes.body);
+
+      // Đợi nhận SSE event
+      await new Promise((r) => setTimeout(r, 300));
+      sseReq.destroy();
+
+      assertTest('REALTIME_SSE', 'Client nhận sự kiện ACCOUNT_DEACTIVATED qua SSE', true, sseReceivedDeactivation, { sseReceivedDeactivation });
+
+      // Mở khóa lại để dọn dẹp
+      await prisma.user.update({
+        where: { id: workerUser.id },
+        data: { isActive: true },
+      });
+    }
+
     // TỔNG KẾT
     console.log('\n========================================');
     const totalPassed = results.filter((r) => r.passed).length;

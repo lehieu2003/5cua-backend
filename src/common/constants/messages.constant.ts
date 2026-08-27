@@ -18,6 +18,7 @@ export const MESSAGES = {
     INVALID_AUTH_HEADER: 'Thiếu hoặc sai định dạng Authorization header',
     TOKEN_INVALID: 'Token không hợp lệ',
     TOKEN_EXPIRED: 'Token đã hết hạn',
+    RATE_LIMIT_EXCEEDED: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.',
   },
 
   // ── Xác thực & Tài khoản ────────────────────────────────────────
@@ -26,6 +27,8 @@ export const MESSAGES = {
     REGISTER_SUCCESS: 'Đăng ký tài khoản thành công',
     LOGOUT_SUCCESS: 'Đăng xuất thành công',
     INVALID_CREDENTIALS: 'Tài khoản hoặc mật khẩu không chính xác',
+    ACCOUNT_DISABLED: 'Tài khoản của bạn đã bị tạm khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
+    AUTH_RATE_LIMIT_EXCEEDED: 'Bạn đã thử đăng nhập quá nhiều lần. Để bảo mật, vui lòng thử lại sau 15 phút.',
     USERNAME_EXISTS: 'Tên đăng nhập đã tồn tại trong hệ thống',
     PHONE_EXISTS: 'Số điện thoại đã được đăng ký',
     EMAIL_EXISTS: 'Email đã được đăng ký',

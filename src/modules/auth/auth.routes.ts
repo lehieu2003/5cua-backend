@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
 import { validate } from '../../common/middlewares/validate.middleware';
 import { authGuard } from '../../common/guards/auth.guard';
+import { roleGuard } from '../../common/guards/role.guard';
+import { authRateLimiter } from '../../common/middlewares/rate-limit.middleware';
 import { authController } from './auth.controller';
 import { LoginSchema, RegisterSchema, ChangePasswordSchema, UpdateProfileSchema } from './auth.dto';
 
@@ -29,8 +31,10 @@ const router = Router();
  *               $ref: '#/components/schemas/LoginResponse'
  *       401:
  *         description: Sai tài khoản hoặc mật khẩu
+ *       429:
+ *         description: Đăng nhập sai quá số lần quy định
  */
-router.post('/api/v1/auth/login', validate(LoginSchema), asyncHandler((req, res) => authController.login(req, res)));
+router.post('/api/v1/auth/login', authRateLimiter, validate(LoginSchema), asyncHandler((req, res) => authController.login(req, res)));
 
 /**
  * @openapi
@@ -50,8 +54,10 @@ router.post('/api/v1/auth/login', validate(LoginSchema), asyncHandler((req, res)
  *         description: Tạo tài khoản thành công
  *       409:
  *         description: Tên đăng nhập đã tồn tại
+ *       429:
+ *         description: Thử đăng ký quá nhiều lần
  */
-router.post('/api/v1/auth/register', validate(RegisterSchema), asyncHandler((req, res) => authController.register(req, res)));
+router.post('/api/v1/auth/register', authRateLimiter, validate(RegisterSchema), asyncHandler((req, res) => authController.register(req, res)));
 
 /**
  * @openapi
@@ -64,6 +70,18 @@ router.post('/api/v1/auth/register', validate(RegisterSchema), asyncHandler((req
  *         description: Đăng xuất thành công
  */
 router.post('/api/v1/auth/logout', asyncHandler((req, res) => authController.logout(req, res)));
+
+/**
+ * @openapi
+ * /api/v1/auth/events:
+ *   get:
+ *     tags: [Auth]
+ *     summary: SSE Event stream theo thời gian thực (nhận thông báo vô hiệu hóa, cập nhật tài khoản)
+ *     responses:
+ *       200:
+ *         description: SSE stream opened
+ */
+router.get('/api/v1/auth/events', asyncHandler((req, res) => authController.events(req, res)));
 
 /**
  * @openapi
@@ -122,6 +140,40 @@ router.get('/api/v1/users', authGuard, asyncHandler((req, res) => authController
 
 /**
  * @openapi
+ * /api/v1/users/{id}/status:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Khóa hoặc mở khóa tài khoản người dùng
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [isActive]
+ *             properties:
+ *               isActive: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Cập nhật trạng thái thành công
+ */
+router.patch(
+  '/api/v1/users/:id/status',
+  authGuard,
+  roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'),
+  asyncHandler((req, res) => authController.updateUserStatus(req, res))
+);
+
+/**
+ * @openapi
  * /api/v1/auth/change-password:
  *   post:
  *     tags: [Auth]
@@ -143,7 +195,9 @@ router.get('/api/v1/users', authGuard, asyncHandler((req, res) => authController
  *         description: Đổi mật khẩu thành công
  *       400:
  *         description: Mật khẩu cũ không đúng
+ *       429:
+ *         description: Thử quá nhiều lần
  */
-router.post('/api/v1/auth/change-password', authGuard, validate(ChangePasswordSchema), asyncHandler((req, res) => authController.changePassword(req, res)));
+router.post('/api/v1/auth/change-password', authGuard, authRateLimiter, validate(ChangePasswordSchema), asyncHandler((req, res) => authController.changePassword(req, res)));
 
 export default router;

@@ -6,6 +6,7 @@ import { env } from '../../common/config/env';
 import { AppError } from '../../common/errors/app.error';
 import { MESSAGES } from '../../common/constants/messages.constant';
 import { UserRole } from '@prisma/client';
+import { sseService } from '../../common/services/sse.service';
 
 export class AuthService {
   constructor(private readonly repo: AuthRepository = authRepository) {}
@@ -19,6 +20,10 @@ export class AuthService {
     const isMatch = await argon2.verify(user.passwordHash, dto.password);
     if (!isMatch) {
       throw AppError.unauthorized(MESSAGES.AUTH.INVALID_CREDENTIALS);
+    }
+
+    if (!user.isActive) {
+      throw AppError.forbidden(MESSAGES.AUTH.ACCOUNT_DISABLED);
     }
 
     // Xác định primary role của user
@@ -206,6 +211,24 @@ export class AuthService {
 
   async listUsers(farmId?: number) {
     return this.repo.findAllUsers(farmId);
+  }
+
+  async updateUserStatus(currentAdminId: number, targetUserId: number, isActive: boolean) {
+    if (currentAdminId === targetUserId) {
+      throw AppError.badRequest('Bạn không thể tự khóa/vô hiệu hóa tài khoản của chính mình');
+    }
+
+    const updatedUser = await this.repo.updateUserStatus(targetUserId, isActive);
+
+    if (!isActive) {
+      sseService.emitToUser(targetUserId, {
+        type: 'ACCOUNT_DEACTIVATED',
+        userId: targetUserId,
+        message: 'Tài khoản của bạn đã bị vô hiệu hóa bởi quản trị viên. Bạn sẽ được đăng xuất khỏi hệ thống.',
+      });
+    }
+
+    return updatedUser;
   }
 }
 

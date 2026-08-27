@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/config/swagger.config';
+import { globalRateLimiter } from './common/middlewares/rate-limit.middleware';
 
 // Module Routers
 import authRoutes from './modules/auth/auth.routes';
@@ -22,7 +24,24 @@ import { env } from './common/config/env';
 
 const app = express();
 
-// ── Middlewares ──────────────────────────────────────────────────
+// ── Bảo mật & Phòng thủ (Security Middlewares) ───────────────────
+app.disable('x-powered-by');
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        imgSrc: ["'self'", 'data:', 'validator.swagger.io'],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  })
+);
+app.use(globalRateLimiter);
+
+// ── Middlewares cơ bản ───────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

@@ -1,4 +1,6 @@
-import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { env } from '../../common/config/env';
+import { sseService } from '../../common/services/sse.service';
 import { authService, AuthService } from './auth.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { AuthenticatedRequest } from '../../common/guards/auth.guard';
@@ -95,6 +97,70 @@ export class AuthController {
       return ResponseUtil.error(res, error.message, error.statusCode || 400);
     }
   }
+
+  /**
+   * RESTful Update User Status: PATCH /api/v1/users/:id/status
+   */
+  async updateUserStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      const currentAdminId = req.user?.userId;
+      if (!currentAdminId) return ResponseUtil.error(res, MESSAGES.SYSTEM.UNAUTHORIZED, 401);
+
+      const targetUserId = parseInt(req.params.id, 10);
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return ResponseUtil.error(res, 'Trường isActive phải là boolean (true/false)', 400);
+      }
+
+      const result = await this.service.updateUserStatus(currentAdminId, targetUserId, isActive);
+      const msg = isActive ? 'Mở khóa tài khoản thành công' : 'Khóa tài khoản thành công';
+      return ResponseUtil.success(res, result, msg);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+    }
+  }
+
+  /**
+   * SSE Events Stream: GET /api/v1/auth/events
+   */
+  async events(req: Request, res: Response) {
+    let token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (!token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
+
+    if (!token) {
+      return ResponseUtil.error(res, MESSAGES.SYSTEM.INVALID_AUTH_HEADER, 401);
+    }
+
+    try {
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
+      if (!decoded || !decoded.userId) {
+        return ResponseUtil.error(res, MESSAGES.SYSTEM.TOKEN_INVALID, 401);
+      }
+
+      const userId = decoded.userId;
+
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+
+      res.write(`data: ${JSON.stringify({ type: 'CONNECTED', userId })}\n\n`);
+
+      sseService.addClient(userId, res);
+
+      req.on('close', () => {
+        sseService.removeClient(userId, res);
+      });
+    } catch (err) {
+      return ResponseUtil.error(res, MESSAGES.SYSTEM.TOKEN_INVALID, 401);
+    }
+  }
 }
 
 export const authController = new AuthController();
+

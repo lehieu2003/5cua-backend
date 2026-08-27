@@ -165,6 +165,19 @@ export class AuthRepository {
       };
     });
   }
+
+  async updateUserStatus(userId: number, isActive: boolean) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        isActive: true,
+      },
+    });
+  }
 }
 
 export const authRepository = new AuthRepository();
