@@ -35,7 +35,11 @@ export class WaterController {
    */
   async listHistory(req: Request, res: Response) {
     try {
-      const pondId = parseInt((req.query.pondId || req.query.warehouseId || req.query.warehouse_id || '1') as string, 10);
+      const rawPondId = req.query.pondId || req.query.warehouseId || req.query.warehouse_id;
+      if (!rawPondId) {
+        return ResponseUtil.error(res, 'Vui lòng cung cấp pondId', 400);
+      }
+      const pondId = parseInt(rawPondId as string, 10);
       const offset = parseInt((req.query.offset || '0') as string, 10);
 
       const data = await this.service.getWaterHistory(pondId, offset);
@@ -50,7 +54,11 @@ export class WaterController {
    */
   async getWarningCount(req: Request, res: Response) {
     try {
-      const farmId = parseInt((req.query.farmId || req.query.farm_id || '1') as string, 10);
+      const rawFarmId = req.query.farmId || req.query.farm_id;
+      if (!rawFarmId) {
+        return ResponseUtil.error(res, 'Vui lòng cung cấp farmId', 400);
+      }
+      const farmId = parseInt(rawFarmId as string, 10);
       const count = await this.service.getWarningCount(farmId);
       return ResponseUtil.success(res, { count });
     } catch (error: any) {

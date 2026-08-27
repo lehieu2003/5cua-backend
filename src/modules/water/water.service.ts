@@ -24,7 +24,11 @@ export class WaterService {
   }
 
   async addWaterCheck(dto: any) {
-    const pondId = parseInt(dto.pondId || dto.warehouseId || dto.pond_id || dto.warehouse_id || '1', 10);
+    const rawPondId = dto.pondId || dto.warehouseId || dto.pond_id || dto.warehouse_id;
+    if (!rawPondId) {
+      throw AppError.badRequest('Vui lòng chọn ao/kho nuôi cần đo nước');
+    }
+    const pondId = parseInt(rawPondId, 10);
     const params = await this.repo.getParameters();
     const paramById = new Map(params.map((p) => [p.id, p]));
     const paramByCode = new Map(params.map((p) => [p.code.toLowerCase(), p]));
@@ -39,8 +43,12 @@ export class WaterService {
         p = paramByCode.get(String(chk.parameterCode).toLowerCase());
       }
 
+      if (!p && !chk.parameterId) {
+        throw AppError.badRequest('Thông số đo nước không tồn tại hoặc không hợp lệ');
+      }
+
       let isWarn = false;
-      const paramId = p ? p.id : (chk.parameterId || 1);
+      const paramId = p ? p.id : chk.parameterId;
       const val = parseFloat(chk.value);
 
       if (p) {
