@@ -47,20 +47,30 @@ export class WaterService {
     }> = [];
 
     const items = checkList.map((chk: any) => {
-      let p = chk.parameterId ? paramById.get(chk.parameterId) : undefined;
+      const rawParamId = chk.parameterId || chk.parameter_id || chk.id;
+      const paramIdNum = rawParamId ? parseInt(rawParamId, 10) : undefined;
+      let p = paramIdNum ? paramById.get(paramIdNum) : undefined;
       if (!p && chk.parameterCode) {
         p = paramByCode.get(String(chk.parameterCode).toLowerCase());
       }
 
-      if (!p && !chk.parameterId) {
+      if (!p && !paramIdNum) {
         throw AppError.badRequest(
           'Thông số đo nước không tồn tại hoặc không hợp lệ',
         );
       }
 
       let isWarn = false;
-      const paramId = p ? p.id : chk.parameterId;
-      const val = parseFloat(chk.value);
+      const finalParamId = p ? p.id : paramIdNum!;
+      
+      // Parse value: hỗ trợ chk.value hoặc chk.value_id hoặc lấy minNormal nếu không truyền số cụ thể
+      let val = 0;
+      if (chk.value !== undefined && chk.value !== null && chk.value !== '') {
+        val = parseFloat(chk.value);
+      } else if (chk.value_id !== undefined || chk.valueId !== undefined) {
+        // Nếu truyền value_id (tương ứng với giá trị an toàn được chọn trong dropdown)
+        val = p ? (p.minNormal + p.maxNormal) / 2 : 0;
+      }
 
       if (p) {
         const isCritical =
@@ -79,7 +89,7 @@ export class WaterService {
       }
 
       return {
-        parameterId: paramId,
+        parameterId: finalParamId,
         value: val,
         isWarning: isWarn,
       };

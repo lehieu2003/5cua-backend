@@ -44,7 +44,10 @@ export class FeedingService {
 
     return {
       status: 'success',
+      success: true,
       record_id: record.id,
+      history_id: record.id,
+      id: record.id,
     };
   }
 

@@ -29,11 +29,17 @@ export class FeedingController {
       const body = req.body;
       const actionType = body.actionType || body.action_type || 'feeding';
 
+      const rawItems = Array.isArray(body.items) ? body.items : [];
+      const items = rawItems.map((it: any) => ({
+        productId: parseInt(it.productId || it.product_id || it.id, 10),
+        qty: parseFloat(it.qty || it.quantity || it.weight || 0),
+      })).filter((it: any) => !isNaN(it.productId) && it.productId > 0 && it.qty > 0);
+
       const result = await this.service.createFeedingRecord({
         actionType,
         pondId: parseInt(body.pondId || body.pond_id, 10),
         srcId: body.srcId || body.src_id ? parseInt(body.srcId || body.src_id, 10) : 1,
-        items: body.items || [],
+        items,
         note: body.note,
       });
 
