@@ -185,19 +185,51 @@ export class FarmRepository {
   }
 
   async findOperations(farmId: number, fromDate?: string, toDate?: string) {
-    const where: any = { farmId };
-    if (fromDate || toDate) {
-      where.createdAt = {};
-      if (fromDate) where.createdAt.gte = new Date(fromDate);
-      if (toDate) where.createdAt.lte = new Date(toDate);
-    }
+    const dateFilter: any = {};
+    if (fromDate) dateFilter.gte = new Date(fromDate);
+    if (toDate) dateFilter.lte = new Date(toDate);
+    const hasDate = Boolean(fromDate || toDate);
+
+    // 1. Đếm số lần kiểm tra nước trong ngày
+    const waterCheckCount = await prisma.waterCheckHistory.count({
+      where: {
+        pond: { farmId },
+        ...(hasDate && { checkDate: dateFilter }),
+      },
+    });
+
+    // 2. Đếm số lần kiểm tra & vệ sinh ao trong ngày
+    const cleaningCount = await prisma.inspectionCleaningRecord.count({
+      where: {
+        pond: { farmId },
+        ...(hasDate && { checkDate: dateFilter }),
+      },
+    });
+
+    // 3. Đếm số lần cho ăn / tạt vi sinh trong ngày
+    const feedingCount = await prisma.feedingRecord.count({
+      where: {
+        pond: { farmId },
+        ...(hasDate && { recordedAt: dateFilter }),
+      },
+    });
+
+    // 4. Lấy operation logs chi tiết
     const logs = await prisma.operationLog.findMany({
-      where,
+      where: {
+        farmId,
+        ...(hasDate && { createdAt: dateFilter }),
+      },
       orderBy: { createdAt: 'desc' },
       include: { user: { select: { id: true, fullName: true, username: true } } },
     });
+
     return {
-      total: logs.length,
+      water_check: waterCheckCount,
+      cleaning_inspection: cleaningCount,
+      feeding_probiotic: feedingCount,
+      other_work: logs.length,
+      total: waterCheckCount + cleaningCount + feedingCount + logs.length,
       data: logs,
     };
   }
