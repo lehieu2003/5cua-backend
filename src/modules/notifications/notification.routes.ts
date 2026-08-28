@@ -19,7 +19,7 @@ const router = Router();
  *       200:
  *         description: Danh sách NotificationItem
  */
-router.get('/api/v1/notifications', asyncHandler((req, res) => notificationController.listNotifications(req, res)));
+router.get('/api/v1/notifications', authGuard, asyncHandler((req, res) => notificationController.listNotifications(req, res)));
 
 /**
  * @openapi
@@ -31,7 +31,7 @@ router.get('/api/v1/notifications', asyncHandler((req, res) => notificationContr
  *       200:
  *         description: Cập nhật thành công
  */
-router.patch('/api/v1/notifications/read-all', asyncHandler((req, res) => notificationController.markAllRead(req, res)));
+router.patch('/api/v1/notifications/read-all', authGuard, asyncHandler((req, res) => notificationController.markAllRead(req, res)));
 
 /**
  * @openapi
@@ -61,7 +61,24 @@ router.patch('/api/v1/notifications/read-all', asyncHandler((req, res) => notifi
  *       200:
  *         description: Xoá thành công
  */
+import { authGuard } from '../../common/guards/auth.guard';
+
 router.get('/api/v1/notifications/:id', asyncHandler((req, res) => notificationController.getNotificationDetail(req, res)));
 router.delete('/api/v1/notifications/:id', asyncHandler((req, res) => notificationController.removeNotification(req, res)));
+
+/**
+ * @openapi
+ * /api/v1/notifications/device-token:
+ *   post:
+ *     tags: [Notifications]
+ *     summary: Đăng ký FCM Device Token cho người dùng
+ *     security:
+ *       - BearerAuth: []
+ *   delete:
+ *     tags: [Notifications]
+ *     summary: Xóa FCM Device Token khi đăng xuất
+ */
+router.post('/api/v1/notifications/device-token', authGuard, asyncHandler((req, res) => notificationController.registerDeviceToken(req, res)));
+router.delete('/api/v1/notifications/device-token', asyncHandler((req, res) => notificationController.unregisterDeviceToken(req, res)));
 
 export default router;

@@ -1,6 +1,8 @@
 import { waterRepository, WaterRepository } from './water.repository';
 import { AddWaterCheckDto } from './water.dto';
-import { AppError } from '@/common/errors/app.error';
+import { AppError } from '../../common/errors/app.error';
+import { notificationService } from '../notifications/notification.service';
+import prisma from '../../database/prisma.service';
 
 export class WaterService {
   constructor(private readonly repo: WaterRepository = waterRepository) {}
@@ -91,6 +93,13 @@ export class WaterService {
       warnings: warningsToCreate,
     });
 
+    // Bắn Push Notification khi có cảnh báo
+    if (hasWarning && warningsToCreate.length > 0) {
+      this.sendWaterWarningNotification(pondId, warningsToCreate, record.id).catch((err) => {
+        console.error('[WaterCheck] Lỗi gửi push notification:', err);
+      });
+    }
+
     return {
       status: 'success',
       has_warning: hasWarning,
@@ -147,6 +156,41 @@ export class WaterService {
 
   async getWarningCount(farmId: number) {
     return this.repo.getWarningCount(farmId);
+  }
+
+  private async sendWaterWarningNotification(
+    pondId: number,
+    warnings: Array<{ title: string; message: string; severity: string }>,
+    recordId: number
+  ) {
+    try {
+      const pond = await prisma.pond.findUnique({
+        where: { id: pondId },
+        include: { farm: { include: { members: true } } },
+      });
+
+      if (!pond || !pond.farm) return;
+
+      const userIds = pond.farm.members.map((m) => m.userId);
+      if (userIds.length === 0) return;
+
+      const title = `⚠️ CẢNH BÁO NƯỚC: Ao ${pond.name}`;
+      const body = warnings.map((w) => w.message).join('\n');
+
+      await notificationService.sendPushNotificationToUsers(
+        userIds,
+        title,
+        body,
+        {
+          type: 'WATER_WARNING',
+          pondId: pondId.toString(),
+          farmId: pond.farmId.toString(),
+          recordId: recordId.toString(),
+        }
+      );
+    } catch (error) {
+      console.error('[WaterService] sendWaterWarningNotification error:', error);
+    }
   }
 }
 

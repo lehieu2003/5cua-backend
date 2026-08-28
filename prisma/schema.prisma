@@ -64,6 +64,7 @@ model User {
   farmMembers  FarmMember[]
   notifications Notification[]
   operationLogs OperationLog[]
+  deviceTokens  DeviceToken[]
 
   @@map("users")
 }
@@ -442,4 +443,18 @@ model OperationLog {
 
   @@index([farmId, createdAt])
   @@map("operation_logs")
+}
+
+model DeviceToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  fcmToken  String   @unique @map("fcm_token")
+  platform  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
 }

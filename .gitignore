@@ -5,4 +5,5 @@ dist
 scratch/
 .DS_Store
 coverage
-.system_generated
+.system_generated\
+firebase-service-account.json
