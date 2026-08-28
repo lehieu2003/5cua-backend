@@ -17,6 +17,8 @@ import waterRoutes from './modules/water/water.routes';
 import moveRoutes from './modules/moves/move.routes';
 import exportRoutes from './modules/exports/export.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
+import analyticsRoutes from './modules/analytics/analytics.routes';
+import reportsRoutes from './modules/reports/reports.routes';
 
 // Global Error Handler
 import { globalErrorHandler } from './common/middlewares/error.handler';
@@ -100,6 +102,8 @@ app.use(waterRoutes);
 app.use(moveRoutes);
 app.use(exportRoutes);
 app.use(notificationRoutes);
+app.use(analyticsRoutes);
+app.use(reportsRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────────────
 app.use((req: Request, res: Response) => {
