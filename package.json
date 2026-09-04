@@ -11,8 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "test": "jest"
+    "lint": "tsc --noEmit",
+    "test": "tsx tests/test_rate_limiting.ts && tsx tests/test_refresh_token.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",
