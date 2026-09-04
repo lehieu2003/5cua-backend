@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/config/swagger.config';
-import { globalRateLimiter } from './common/middlewares/rate-limit.middleware';
+import { globalRateLimiter, authenticatedRateLimiter } from './common/middlewares/rate-limit.middleware';
 
 // Module Routers
 import authRoutes from './modules/auth/auth.routes';
@@ -25,6 +25,17 @@ import { globalErrorHandler } from './common/middlewares/error.handler';
 import { env } from './common/config/env';
 
 const app = express();
+
+// ── Reverse Proxy Configuration (X-Forwarded-For) ───────────────
+if (env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', true);
+} else if (env.TRUST_PROXY === 'false') {
+  app.set('trust proxy', false);
+} else if (!isNaN(Number(env.TRUST_PROXY))) {
+  app.set('trust proxy', Number(env.TRUST_PROXY));
+} else {
+  app.set('trust proxy', env.TRUST_PROXY);
+}
 
 // ── Bảo mật & Phòng thủ (Security Middlewares) ───────────────────
 app.disable('x-powered-by');
@@ -93,6 +104,15 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 // ── Module Routers ───────────────────────────────────────────────
 // Mỗi module tự quản lý routes của mình qua *.routes.ts
 app.use(authRoutes);
+
+// Áp dụng authenticatedRateLimiter (theo User ID / IP) cho các route nghiệp vụ
+app.use('/api/v1', (req, res, next) => {
+  if (req.path.startsWith('/auth')) {
+    return next();
+  }
+  return authenticatedRateLimiter(req, res, next);
+});
+
 app.use(farmRoutes);
 app.use(pondRoutes);
 app.use(batchRoutes);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
 import { authGuard } from '../../common/guards/auth.guard';
+import { heavyOperationLimiter } from '../../common/middlewares/rate-limit.middleware';
 import { reportsController } from './reports.controller';
 
 const router = Router();
@@ -24,6 +25,7 @@ const router = Router();
 router.get(
   '/api/v1/reports/export/batches',
   authGuard,
+  heavyOperationLimiter,
   asyncHandler((req, res) => reportsController.exportBatches(req, res))
 );
 
@@ -55,6 +57,7 @@ router.get(
 router.get(
   '/api/v1/reports/export/water-history',
   authGuard,
+  heavyOperationLimiter,
   asyncHandler((req, res) => reportsController.exportWaterHistory(req, res))
 );
 
@@ -86,6 +89,7 @@ router.get(
 router.get(
   '/api/v1/reports/export/feeding-history',
   authGuard,
+  heavyOperationLimiter,
   asyncHandler((req, res) => reportsController.exportFeedingHistory(req, res))
 );
 
@@ -114,6 +118,7 @@ router.get(
 router.get(
   '/api/v1/reports/export/sales-history',
   authGuard,
+  heavyOperationLimiter,
   asyncHandler((req, res) => reportsController.exportSalesHistory(req, res))
 );
 

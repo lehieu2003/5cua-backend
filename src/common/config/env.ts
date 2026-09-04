@@ -22,6 +22,7 @@ export const env = {
   PORT:     optionalEnv('PORT', '5000'),
   NODE_ENV: optionalEnv('NODE_ENV', 'development'),
   APP_URL:  optionalEnv('APP_URL', ''),   // Dùng trong Swagger server URL
+  TRUST_PROXY: optionalEnv('TRUST_PROXY', '1'),
 
   // ── Database ────────────────────────────────────────────────────
   DATABASE_URL: requireEnv('DATABASE_URL'),

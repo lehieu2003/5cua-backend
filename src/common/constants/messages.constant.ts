@@ -19,6 +19,8 @@ export const MESSAGES = {
     TOKEN_INVALID: 'Token không hợp lệ',
     TOKEN_EXPIRED: 'Token đã hết hạn',
     RATE_LIMIT_EXCEEDED: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.',
+    USER_RATE_LIMIT_EXCEEDED: 'Tài khoản của bạn đã thực hiện quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút.',
+    HEAVY_OPERATION_RATE_LIMIT_EXCEEDED: 'Bạn đang thực hiện thao tác này quá thường xuyên. Vui lòng thử lại sau 1 phút.',
   },
 
   // ── Xác thực & Tài khoản ────────────────────────────────────────
