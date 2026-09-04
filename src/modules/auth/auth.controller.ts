@@ -35,10 +35,27 @@ export class AuthController {
   }
 
   /**
+   * RESTful Refresh Token: POST /api/v1/auth/refresh
+   */
+  async refreshToken(req: Request, res: Response) {
+    try {
+      const result = await this.service.refreshToken(req.body);
+      return ResponseUtil.success(res, result, 'Làm mới token thành công');
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, error.statusCode || 401);
+    }
+  }
+
+  /**
    * RESTful Logout: POST /api/v1/auth/logout
    */
-  async logout(_req: Request, res: Response) {
-    return ResponseUtil.success(res, null, MESSAGES.AUTH.LOGOUT_SUCCESS);
+  async logout(req: Request, res: Response) {
+    try {
+      await this.service.logout(req.body);
+      return ResponseUtil.success(res, null, MESSAGES.AUTH.LOGOUT_SUCCESS);
+    } catch (error: any) {
+      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+    }
   }
 
   /**

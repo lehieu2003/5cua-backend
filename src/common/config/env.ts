@@ -30,7 +30,7 @@ export const env = {
   // ── JWT Secrets (REQUIRED — không có default) ───────────────────
   JWT_ACCESS_SECRET:  requireEnv('JWT_ACCESS_SECRET'),
   JWT_REFRESH_SECRET: requireEnv('JWT_REFRESH_SECRET'),
-  JWT_ACCESS_EXPIRES:  optionalEnv('JWT_ACCESS_EXPIRES',  '7d'),
+  JWT_ACCESS_EXPIRES:  optionalEnv('JWT_ACCESS_EXPIRES',  '1h'),
   JWT_REFRESH_EXPIRES: optionalEnv('JWT_REFRESH_EXPIRES', '30d'),
 
   // ── Seed / Initial Data (dùng khi chạy prisma db seed) ──────────

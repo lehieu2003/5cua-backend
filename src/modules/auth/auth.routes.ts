@@ -5,7 +5,7 @@ import { authGuard } from '../../common/guards/auth.guard';
 import { roleGuard } from '../../common/guards/role.guard';
 import { authRateLimiter } from '../../common/middlewares/rate-limit.middleware';
 import { authController } from './auth.controller';
-import { LoginSchema, RegisterSchema, ChangePasswordSchema, UpdateProfileSchema } from './auth.dto';
+import { LoginSchema, RegisterSchema, ChangePasswordSchema, UpdateProfileSchema, RefreshTokenSchema, LogoutSchema } from './auth.dto';
 
 const router = Router();
 
@@ -61,15 +61,63 @@ router.post('/api/v1/auth/register', authRateLimiter, validate(RegisterSchema), 
 
 /**
  * @openapi
+ * /api/v1/auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Làm mới Access Token bằng Refresh Token (Single-Use Rotation)
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Cấp token mới thành công
+ *       401:
+ *         description: Refresh token không hợp lệ, hết hạn hoặc phát hiện tái sử dụng
+ *       403:
+ *         description: Tài khoản đã bị khóa
+ *       429:
+ *         description: Quá nhiều yêu cầu làm mới token
+ */
+router.post(
+  '/api/v1/auth/refresh',
+  authRateLimiter,
+  validate(RefreshTokenSchema),
+  asyncHandler((req, res) => authController.refreshToken(req, res))
+);
+
+/**
+ * @openapi
  * /api/v1/auth/logout:
  *   post:
  *     tags: [Auth]
- *     summary: Đăng xuất
+ *     summary: Đăng xuất và thu hồi Refresh Token trên server
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Đăng xuất thành công
  */
-router.post('/api/v1/auth/logout', asyncHandler((req, res) => authController.logout(req, res)));
+router.post(
+  '/api/v1/auth/logout',
+  validate(LogoutSchema),
+  asyncHandler((req, res) => authController.logout(req, res))
+);
 
 /**
  * @openapi

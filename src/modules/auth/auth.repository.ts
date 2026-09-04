@@ -178,6 +178,49 @@ export class AuthRepository {
       },
     });
   }
+
+  async createRefreshToken(data: {
+    userId: number;
+    tokenHash: string;
+    familyId: string;
+    expiresAt: Date;
+  }) {
+    return prisma.refreshToken.create({
+      data: {
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        familyId: data.familyId,
+        expiresAt: data.expiresAt,
+      },
+    });
+  }
+
+  async findRefreshTokenByHash(tokenHash: string) {
+    return prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+  }
+
+  async revokeRefreshToken(id: number) {
+    return prisma.refreshToken.update({
+      where: { id },
+      data: { isRevoked: true },
+    });
+  }
+
+  async revokeFamilyTokens(familyId: string) {
+    return prisma.refreshToken.updateMany({
+      where: { familyId },
+      data: { isRevoked: true },
+    });
+  }
+
+  async revokeAllUserTokens(userId: number) {
+    return prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { isRevoked: true },
+    });
+  }
 }
 
 export const authRepository = new AuthRepository();

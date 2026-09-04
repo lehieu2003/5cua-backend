@@ -42,9 +42,19 @@ export const UpdateProfileSchema = z.object({
   avatarBase64: z.string().optional(),
 });
 
+export const RefreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+export const LogoutSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
 export type LoginDto = z.infer<typeof LoginSchema>;
 export type RegisterDto = z.infer<typeof RegisterSchema>;
 export type ChangePasswordDto = z.infer<typeof ChangePasswordSchema>;
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
+export type RefreshTokenDto = z.infer<typeof RefreshTokenSchema>;
+export type LogoutDto = z.infer<typeof LogoutSchema>;
 export type UserRoleType = z.infer<typeof UserRoleEnum>;
 export type MemberType = z.infer<typeof MemberTypeEnum>;
