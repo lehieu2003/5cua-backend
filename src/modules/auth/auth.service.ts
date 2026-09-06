@@ -281,9 +281,61 @@ export class AuthService {
       throw AppError.unauthorized('Refresh token không tồn tại trong hệ thống');
     }
 
-    // 3. REUSE DETECTION: If token was already revoked, family is compromised!
+    // 3. REUSE DETECTION & GRACE PERIOD:
+    // Nếu token đã bị revoked, kiểm tra xem có vừa được rotate trong Grace Period (30s) không.
+    // Xử lý các request đồng thời (race condition) thường gặp trên mạng di động.
     if (tokenRecord.isRevoked) {
-      // Invalidate all active tokens in this session family
+      const GRACE_PERIOD_MS = 30 * 1000;
+      const latestToken = await this.repo.findLatestActiveTokenInFamily(tokenRecord.familyId);
+
+      if (latestToken && Date.now() - latestToken.createdAt.getTime() <= GRACE_PERIOD_MS) {
+        const user = await this.repo.findById(tokenRecord.userId);
+        if (user && user.isActive) {
+          const primaryFarmMember = user.farmMembers?.[0];
+          const role: UserRole | string =
+            user.memberType === 'ADMIN'
+              ? UserRole.SUPER_ADMIN
+              : primaryFarmMember?.role || UserRole.WORKER;
+          const memberTypeFormatted = (user.memberType || 'standard').toLowerCase();
+
+          const newAccessToken = jwt.sign(
+            {
+              userId: user.id,
+              username: user.username,
+              role,
+              memberType: memberTypeFormatted,
+            },
+            env.JWT_ACCESS_SECRET,
+            { expiresIn: env.JWT_ACCESS_EXPIRES as any }
+          );
+
+          const newRefreshToken = jwt.sign(
+            {
+              userId: user.id,
+              username: user.username,
+              role,
+              memberType: memberTypeFormatted,
+              familyId: tokenRecord.familyId,
+            },
+            env.JWT_REFRESH_SECRET,
+            { expiresIn: env.JWT_REFRESH_EXPIRES as any }
+          );
+
+          await this.repo.createRefreshToken({
+            userId: user.id,
+            tokenHash: hashToken(newRefreshToken),
+            familyId: tokenRecord.familyId,
+            expiresAt: calculateExpiry(env.JWT_REFRESH_EXPIRES),
+          });
+
+          return {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          };
+        }
+      }
+
+      // Vượt quá grace period: Vô hiệu hóa toàn bộ session family để phòng chống tấn công
       await this.repo.revokeFamilyTokens(tokenRecord.familyId);
       throw AppError.unauthorized('Refresh token đã bị vô hiệu hóa (phát hiện hành vi tái sử dụng token)');
     }

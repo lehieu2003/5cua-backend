@@ -4,6 +4,7 @@ export const CreateFeedingSchema = z.object({
   actionType: z.enum(['feeding', 'probiotic']).default('feeding'),
   pondId: z.number().int().positive(),
   srcId: z.number().optional().default(1),
+  userId: z.number().optional(),
   items: z.array(
     z.object({
       productId: z.number().int().positive(),

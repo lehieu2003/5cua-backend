@@ -208,6 +208,13 @@ export class AuthRepository {
     });
   }
 
+  async findLatestActiveTokenInFamily(familyId: string) {
+    return prisma.refreshToken.findFirst({
+      where: { familyId, isRevoked: false },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async revokeFamilyTokens(familyId: string) {
     return prisma.refreshToken.updateMany({
       where: { familyId },

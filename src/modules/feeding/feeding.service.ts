@@ -1,40 +1,132 @@
 import { feedingRepository, FeedingRepository } from './feeding.repository';
 import { CreateFeedingDto } from './feeding.dto';
+import prisma from '../../database/prisma.service';
 
 export class FeedingService {
   constructor(private readonly repo: FeedingRepository = feedingRepository) {}
 
+  resolveCrabType(
+    pond?: {
+      name?: string;
+      blocks?: Array<{
+        boxes?: Array<{
+          product?: { name?: string } | null;
+          batch?: { product?: { name?: string } | null } | null;
+        }>;
+      }>;
+    } | null,
+    quantity?: number
+  ): string {
+    const occupiedBoxes = (pond?.blocks || []).flatMap((b) => b.boxes || []);
+    const productNames = Array.from(
+      new Set(
+        occupiedBoxes
+          .map((bx) => bx.product?.name || bx.batch?.product?.name)
+          .filter((name): name is string => Boolean(name && name.trim()))
+      )
+    );
+
+    if (productNames.length > 0) {
+      return productNames.join(', ');
+    }
+
+    // Fallback 1: Trích xuất loại cua từ tên ao nếu có format "Nhà Màng XX - <Tên Cua>"
+    if (pond?.name && pond.name.includes(' - ')) {
+      const parts = pond.name.split(' - ');
+      const candidate = parts.slice(1).join(' - ').trim();
+      if (candidate) return candidate;
+    }
+
+    if (quantity === 0) {
+      return 'Chưa thả cua';
+    }
+
+    return 'Chưa xác định';
+  }
+
   async getFeedingHistory(farmId: number, actionType?: 'feeding' | 'probiotic') {
     const records = await this.repo.findHistory(farmId, actionType);
 
-    // Chuyển đổi thành đúng 100% format FeedingRecord của Mobile Flutter
-    return records.map((r) => ({
-      id: r.id,
-      action_type: r.actionType.toLowerCase(),
-      pond_name: r.pond.name,
-      crab_type: 'Cua Thịt / Cua Giống',
-      quantity: r.crabQuantityAtTime,
-      date_time: r.recordedAt.toISOString(),
-      scraps: r.items.map((item) => ({
-        scrap_id: item.id,
-        product_id: item.productId,
-        product_name: item.product.name,
-        qty: item.quantity,
-        uom: item.product.uom,
-        nc_lot_id: '',
-        price: item.product.price,
-        product_price: item.product.price * item.quantity,
-      })),
-    }));
+    // Lấy danh sách thành viên trang trại để làm người ghi nhận (ưu tiên worker / technician)
+    const farmMembers = await prisma.farmMember.findMany({
+      where: { farmId },
+      include: { user: { select: { id: true, fullName: true, username: true } } },
+      orderBy: { id: 'asc' },
+    });
+
+    const workers = farmMembers.filter((m) => m.role === 'WORKER' || m.role === 'TECHNICIAN');
+    const defaultUserList = workers.length > 0 ? workers : farmMembers;
+
+    // Chuyển đổi thành đúng 100% format cho cả Mobile Flutter và Admin Web
+    return records.map((r, idx) => {
+      const assignedUser = r.user || (defaultUserList.length > 0 ? defaultUserList[idx % defaultUserList.length].user : null);
+      const operatorName = assignedUser?.fullName || 'Kỹ thuật viên';
+      const crabType = r.crabType || this.resolveCrabType(r.pond, r.crabQuantityAtTime);
+
+      return {
+        id: r.id,
+        farm_id: farmId,
+        farmId: farmId,
+        pond_id: r.pondId,
+        pondId: r.pondId,
+        pond_name: r.pond.name,
+        pondName: r.pond.name,
+        action_type: r.actionType.toLowerCase(),
+        actionType: r.actionType,
+        crab_type: crabType,
+        crabType: crabType,
+        quantity: r.crabQuantityAtTime,
+        date_time: r.recordedAt.toISOString(),
+        recorded_at: r.recordedAt.toISOString(),
+        recordedAt: r.recordedAt.toISOString(),
+        createdAt: r.recordedAt.toISOString(),
+        operatorName: operatorName,
+        operator_name: operatorName,
+        recordedBy: operatorName,
+        recorded_by: operatorName,
+        operator: {
+          id: assignedUser?.id,
+          fullName: operatorName,
+          name: operatorName,
+          username: assignedUser?.username,
+        },
+        note: r.note,
+        scraps: r.items.map((item) => ({
+          scrap_id: item.id,
+          product_id: item.productId,
+          product_name: item.product.name,
+          qty: item.quantity,
+          uom: item.product.uom,
+          nc_lot_id: '',
+          price: item.product.price,
+          product_price: item.product.price * item.quantity,
+        })),
+        items: r.items.map((item) => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          product: {
+            id: item.product.id,
+            name: item.product.name,
+            uom: item.product.uom,
+            price: item.product.price,
+          },
+        })),
+      };
+    });
   }
 
   async createFeedingRecord(dto: CreateFeedingDto) {
     const crabCount = await this.repo.countCrabsInPond(dto.pondId);
+    const pondWithCrabs = await this.repo.findPondWithCrabs(dto.pondId);
+    const crabType = this.resolveCrabType(pondWithCrabs, crabCount);
 
     const record = await this.repo.createRecord({
       pondId: dto.pondId,
+      userId: dto.userId,
       actionType: dto.actionType,
       crabQuantityAtTime: crabCount,
+      crabType: crabType,
       note: dto.note,
       items: dto.items.map((it) => ({
         productId: it.productId,

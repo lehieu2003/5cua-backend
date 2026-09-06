@@ -15,7 +15,32 @@ export class FeedingRepository {
         ...(dbActionType && { actionType: dbActionType }),
       },
       include: {
-        pond: true,
+        pond: {
+          include: {
+            blocks: {
+              include: {
+                boxes: {
+                  where: { status: 'OCCUPIED' },
+                  include: {
+                    product: { select: { id: true, name: true } },
+                    batch: {
+                      include: {
+                        product: { select: { id: true, name: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+          },
+        },
         items: {
           include: {
             product: true,
@@ -29,16 +54,20 @@ export class FeedingRepository {
 
   async createRecord(data: {
     pondId: number;
+    userId?: number;
     actionType: 'feeding' | 'probiotic';
     crabQuantityAtTime: number;
+    crabType?: string;
     note?: string;
     items: Array<{ productId: number; quantity: number }>;
   }) {
     return prisma.feedingRecord.create({
       data: {
         pondId: data.pondId,
+        userId: data.userId,
         actionType: data.actionType.toUpperCase() === 'PROBIOTIC' ? ActionType.PROBIOTIC : ActionType.FEEDING,
         crabQuantityAtTime: data.crabQuantityAtTime,
+        crabType: data.crabType,
         note: data.note,
         items: {
           create: data.items.map((item) => ({
@@ -48,9 +77,40 @@ export class FeedingRepository {
         },
       },
       include: {
+        pond: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+          },
+        },
         items: {
           include: {
             product: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findPondWithCrabs(pondId: number) {
+    return prisma.pond.findUnique({
+      where: { id: pondId },
+      include: {
+        blocks: {
+          include: {
+            boxes: {
+              where: { status: 'OCCUPIED' },
+              include: {
+                product: { select: { id: true, name: true } },
+                batch: {
+                  include: {
+                    product: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
           },
         },
       },

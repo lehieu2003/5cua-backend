@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { feedingService, FeedingService } from './feeding.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import jwt from 'jsonwebtoken';
+import { env } from '../../common/config/env';
 
 export class FeedingController {
   constructor(private readonly service: FeedingService = feedingService) {}
@@ -35,10 +37,27 @@ export class FeedingController {
         qty: parseFloat(it.qty || it.quantity || it.weight || 0),
       })).filter((it: any) => !isNaN(it.productId) && it.productId > 0 && it.qty > 0);
 
+      // Extract userId from body or auth header token
+      let userId: number | undefined = undefined;
+      if (body.userId || body.user_id || body.operatorId) {
+        userId = parseInt(body.userId || body.user_id || body.operatorId, 10);
+      } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        try {
+          const token = req.headers.authorization.split(' ')[1];
+          const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
+          if (decoded && decoded.userId) {
+            userId = decoded.userId;
+          }
+        } catch (_) {
+          // Token invalid/expired, continue without userId
+        }
+      }
+
       const result = await this.service.createFeedingRecord({
         actionType,
         pondId: parseInt(body.pondId || body.pond_id, 10),
         srcId: body.srcId || body.src_id ? parseInt(body.srcId || body.src_id, 10) : 1,
+        userId,
         items,
         note: body.note,
       });

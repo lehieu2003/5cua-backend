@@ -66,6 +66,7 @@ model User {
   operationLogs OperationLog[]
   deviceTokens  DeviceToken[]
   refreshTokens RefreshToken[]
+  feedingRecords FeedingRecord[]
 
   @@map("users")
 }
@@ -262,15 +263,19 @@ model BatchImage {
 model FeedingRecord {
   id          Int        @id @default(autoincrement())
   pondId      Int        @map("pond_id")
+  userId      Int?       @map("user_id")
   actionType  ActionType @default(FEEDING) @map("action_type")
   crabQuantityAtTime Int @default(0) @map("crab_quantity_at_time")
+  crabType    String?    @map("crab_type")
   note        String?
   recordedAt  DateTime   @default(now()) @map("recorded_at")
 
   pond        Pond       @relation(fields: [pondId], references: [id], onDelete: Cascade)
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   items       FeedingItem[]
 
   @@index([pondId, actionType, recordedAt])
+  @@index([userId])
   @@map("feeding_records")
 }
 
