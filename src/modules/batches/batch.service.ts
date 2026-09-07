@@ -194,6 +194,11 @@ export class BatchService {
       }
     }
 
+    let finalNote = dto.note || '';
+    if (dto.warehouses && dto.warehouses.length > 0) {
+      finalNote = `${finalNote}\n[POND_DISTRIBUTION]:${JSON.stringify(dto.warehouses)}`.trim();
+    }
+
     const batch = await this.repo.createBatchWithAllocation({
       farmId: dto.farmId,
       code: batchCode,
@@ -209,7 +214,7 @@ export class BatchService {
       cost: dto.cost || 0,
       expectedRevenue: dto.expectedRevenue || 0,
       expectedSuccessRate: dto.expectedSuccessRate || 90,
-      note: dto.note,
+      note: finalNote,
       boxIds,
       images: dto.images,
     });
@@ -226,6 +231,89 @@ export class BatchService {
     if (!b) {
       throw AppError.notFound(MESSAGES.BATCH.NOT_FOUND);
     }
+
+    let warehouses = this.formatWarehousesFromBoxes(b.boxes);
+    let note = b.note || '';
+
+    // If note contains [POND_DISTRIBUTION], resolve complete warehouses array (both compound and square ponds)
+    if (note.includes('[POND_DISTRIBUTION]:')) {
+      const parts = note.split('[POND_DISTRIBUTION]:');
+      note = parts[0].trim();
+      const distributionJson = parts[1].trim();
+      try {
+        const rawWarehouses = JSON.parse(distributionJson);
+        if (Array.isArray(rawWarehouses) && rawWarehouses.length > 0) {
+          const pondIds = rawWarehouses
+            .map((w: any) => parseInt(w.id || w.pondId, 10))
+            .filter((id: number) => !isNaN(id));
+
+          const ponds = pondIds.length > 0
+            ? await prisma.pond.findMany({
+                where: { id: { in: pondIds } },
+                include: {
+                  blocks: {
+                    include: {
+                      boxes: true,
+                    },
+                  },
+                },
+              })
+            : [];
+          const pondMap = new Map(ponds.map((p) => [p.id, p]));
+          const boxMap = new Map((b.boxes || []).map((bx) => [bx.id, bx]));
+
+          warehouses = rawWarehouses.map((w: any) => {
+            const pId = parseInt(w.id || w.pondId, 10);
+            const p = pondMap.get(pId);
+            const isCompound = w.isCompound === true || (w.blocks && w.blocks.length > 0) || p?.pondType === 'box_grid';
+
+            if (!isCompound) {
+              return {
+                id: pId,
+                name: p ? p.name : (w.name || `Ao ${pId}`),
+                type: 'square_pond',
+                product_uom_qty: parseInt(w.product_uom_qty || w.quantity || '0', 10),
+                blocks: [],
+              };
+            }
+
+            const rawBlocks = w.blocks || [];
+            const blockList = rawBlocks.map((blk: any) => {
+              const bId = parseInt(blk.id || blk.block_id, 10);
+              const foundBlock = p?.blocks.find((bl) => bl.id === bId);
+              const rawLocs = blk.locations || blk.boxes || [];
+              const locList = rawLocs.map((loc: any) => {
+                const locId = parseInt(loc.id || loc.location_id, 10);
+                const foundBox = boxMap.get(locId) || foundBlock?.boxes.find((bx) => bx.id === locId);
+                return {
+                  id: locId,
+                  name: foundBox?.code || loc.name || `Hộp ${locId}`,
+                  code: foundBox?.code || loc.code,
+                  quantity: parseInt(loc.quantity || '1', 10),
+                };
+              });
+
+              return {
+                id: bId,
+                name: foundBlock?.name || blk.name || `Dãy ${bId}`,
+                code: blk.code || (foundBlock ? `B${foundBlock.posZ}` : undefined),
+                quantity: locList.length > 0 ? locList.length : parseInt(blk.quantity || '0', 10),
+                locations: locList,
+              };
+            });
+
+            return {
+              id: pId,
+              name: p ? p.name : (w.name || `Ao ${pId}`),
+              type: p?.pondType || 'box_grid',
+              product_uom_qty: parseInt(w.product_uom_qty || w.quantity || '0', 10),
+              blocks: blockList,
+            };
+          });
+        }
+      } catch (_) {}
+    }
+
     return {
       id: b.id.toString(),
       code: b.code,
@@ -248,13 +336,13 @@ export class BatchService {
       expected_revenue: b.expectedRevenue,
       expected_success_rate: b.expectedSuccessRate,
       status: b.status.toLowerCase(),
-      note: b.note || '',
+      note,
       images: b.images.map((img) => ({
         id: img.id,
         name: `image_${img.id}`,
         imageUrl: img.imageUrl,
       })),
-      warehouses: this.formatWarehousesFromBoxes(b.boxes),
+      warehouses,
     };
   }
 
