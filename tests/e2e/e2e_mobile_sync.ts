@@ -381,6 +381,30 @@ async function run() {
     }
   }
 
+  // ── MOB-TASKS: GET /farms/:id/tasks (mobile home widget gọi, hiện 404) ──
+  {
+    const farm1Id = farm1.id;
+    const tasksRes = await api('GET', `/api/v1/farms/${farm1Id}/tasks?taskType=WATER_CHECK`, {
+      token: workerToken,
+    });
+    const rows = tasksRes.body?.data;
+    const shapeOk =
+      tasksRes.status === 200 &&
+      Array.isArray(rows) &&
+      rows.every(
+        (t: any) =>
+          t.id !== undefined &&
+          typeof t.created_at === 'string' && !isNaN(Date.parse(t.created_at)) &&
+          typeof t.deadline_time === 'string' && !isNaN(Date.parse(t.deadline_time)) &&
+          t.status?.code !== undefined
+      );
+    record(
+      '[TASKS] GET /farms/:id/tasks → 200 + item parse-safe cho JobModel',
+      shapeOk,
+      `status=${tasksRes.status}, rows=${Array.isArray(rows) ? rows.length : 'not-list'}, sample=${JSON.stringify(Array.isArray(rows) ? rows[0] : null).slice(0, 120)}`
+    );
+  }
+
   printSummary(SUITE);
 }
 

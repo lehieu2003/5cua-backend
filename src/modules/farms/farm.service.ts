@@ -1,3 +1,4 @@
+import prisma from '../../database/prisma.service';
 import { farmRepository, FarmRepository } from './farm.repository';
 import { CreateFarmDto } from './farm.dto';
 import { AppError } from '../../common/errors/app.error';
@@ -26,6 +27,43 @@ export class FarmService {
 
   async getFarmOperations(farmId: number, fromDate?: string, toDate?: string) {
     return this.repo.findOperations(farmId, fromDate, toDate);
+  }
+
+  /**
+   * GET /farms/:id/tasks — mobile home widget gọi theo taskType
+   * (WATER_CHECK / CLEANING_INSPECTION / FEEDING...). Dữ liệu thật từ
+   * OperationLog; FEEDING hiện không có log nên trả rỗng.
+   */
+  async getFarmTasks(farmId: number, taskType?: string, _keyword?: string, offset = 0) {
+    const typeMap: Record<string, string[]> = {
+      WATER_CHECK: ['WATER_CHECK'],
+      CLEANING_INSPECTION: ['INSPECTION_CLEANING'],
+      FEEDING: ['FEEDING'],
+      MOVE: ['MOVE_BOX', 'UPDATE_MOVE_STATUS'],
+      EXPORT: ['EXPORT_HARVEST', 'UPDATE_EXPORT_STATUS'],
+      BATCH: ['CREATE_BATCH', 'UPDATE_BATCH_STATUS', 'ASSIGN_BATCH_DISTRIBUTION'],
+      CONVERT_CRAB: ['CONVERT_CRAB'],
+    };
+    const actions = taskType ? typeMap[taskType.toUpperCase().trim()] : undefined;
+    const logs = await prisma.operationLog.findMany({
+      where: {
+        farmId,
+        ...(actions && { action: { in: actions } }),
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: 20,
+    });
+    return logs.map((log) => ({
+      id: log.id,
+      name: log.action,
+      content:
+        log.details && typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details ?? ''),
+      created_at: log.createdAt.toISOString(),
+      // JobModel của mobile parse deadline_time bằng DateTime.parse (không nhận null)
+      deadline_time: new Date(log.createdAt.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+      status: { code: 'OT_001' },
+    }));
   }
 
 

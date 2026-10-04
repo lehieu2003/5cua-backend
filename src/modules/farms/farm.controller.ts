@@ -64,7 +64,25 @@ export class FarmController {
     }
   }
 
-
+  /**
+   * REST: GET /api/v1/farms/:id/tasks — mobile home widget
+   */
+  async getFarmTasks(req: Request, res: Response) {
+    try {
+      const farmId = parseInt(req.params.id, 10);
+      const { taskType, keyword } = req.query;
+      const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+      const tasks = await this.service.getFarmTasks(
+        farmId,
+        taskType as string | undefined,
+        keyword as string | undefined,
+        offset
+      );
+      return ResponseUtil.success(res, tasks);
+    } catch (error: any) {
+      return ResponseUtil.fromError(res, error);
+    }
+  }
 }
 
 export const farmController = new FarmController();

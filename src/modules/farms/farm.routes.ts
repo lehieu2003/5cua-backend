@@ -42,5 +42,6 @@ router.get('/api/v1/farms', authGuard, asyncHandler((req, res) => farmController
 router.get('/api/v1/farms/:id/overview', asyncHandler((req, res) => farmController.getFarmOverview(req, res)));
 router.get('/api/v1/farms/:id/warnings', asyncHandler((req, res) => farmController.getFarmWarnings(req, res)));
 router.get('/api/v1/farms/:id/operations', asyncHandler((req, res) => farmController.getFarmOperations(req, res)));
+router.get('/api/v1/farms/:id/tasks', authGuard, asyncHandler((req, res) => farmController.getFarmTasks(req, res)));
 
 export default router;
