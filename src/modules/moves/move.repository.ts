@@ -132,14 +132,17 @@ export class MoveRepository {
   async updateStatus(id: number, status: MoveStatus) {
     const allowed: string[] = Object.values(MoveStatus);
     const s = (status || '').toString().toUpperCase().trim();
-    if (!allowed.includes(s)) {
+    // Mobile gửi 'cancel' (thiếu 'led') — chuẩn hóa trước khi kiểm tra enum
+    const normalized =
+      s === 'CANCEL' || s === 'CANCELED' ? MoveStatus.CANCELLED : (s as MoveStatus);
+    if (!allowed.includes(normalized)) {
       throw AppError.badRequest(
         `Trạng thái chuyển hộp không hợp lệ: "${status}". Cho phép: ${allowed.join(', ')}`
       );
     }
     return prisma.stockPickingMove.update({
       where: { id },
-      data: { status: s as MoveStatus },
+      data: { status: normalized as MoveStatus },
     });
   }
 }

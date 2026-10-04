@@ -115,6 +115,73 @@ async function run() {
     if (fixture) await teardownTestFarm();
   }
 
+  // ── MOB-STATUS: mobile hủy phiếu bằng 'cancel' (chữ thường, thiếu 'led') ──
+  {
+    const f = await setupTestFarm();
+    try {
+      const ts = Date.now();
+      const batchRes = await api('POST', '/api/v1/batches', {
+        token: adminToken,
+        body: {
+          farmId: f.farmId,
+          name: `E2E-BATCH-STATUS-${ts}`,
+          productId: f.productId,
+          importDate: new Date().toISOString().slice(0, 10),
+          initialQuantity: 10,
+          initialWeight: 4,
+          warehouses: [{
+            id: String(f.farmId),
+            product_uom_qty: '10',
+            blocks: [{ id: String(f.blockId), locations: [{ id: String(f.emptyBoxIds[0]) }, { id: String(f.emptyBoxIds[1]) }] }],
+          }],
+        },
+      });
+      if (!(batchRes.status === 200 || batchRes.status === 201)) {
+        throw new Error(`Tạo batch fixture lỗi: ${JSON.stringify(batchRes.body).slice(0, 160)}`);
+      }
+
+      // Mobile gửi snake_case cho moves (switch_pond_api.dart)
+      const moveRes = await api('POST', '/api/v1/moves', {
+        token: adminToken,
+        body: { source_box_id: f.emptyBoxIds[0], dest_box_id: f.emptyBoxIds[2], reason: 'E2E mobile sync' },
+      });
+      const moveId = moveRes.body?.data?.move_id ?? moveRes.body?.data?.id;
+
+      const moveCancel = await api('PATCH', `/api/v1/moves/${moveId}/status`, {
+        token: adminToken,
+        body: { status: 'cancel' },
+      });
+      const moveAfter = moveId ? await prisma.stockPickingMove.findUnique({ where: { id: Number(moveId) } }) : null;
+      record(
+        '[STATUS] PATCH /moves/:id/status "cancel" → 200 + CANCELLED',
+        moveCancel.status === 200 && moveAfter?.status === 'CANCELLED',
+        `status=${moveCancel.status}, db=${moveAfter?.status}, body=${JSON.stringify(moveCancel.body).slice(0, 140)}`
+      );
+
+      const exportRes = await api('POST', '/api/v1/exports', {
+        token: adminToken,
+        body: {
+          farmId: f.farmId,
+          partnerName: 'E2E Mobile Sync',
+          boxes: [{ boxId: f.emptyBoxIds[1], productId: f.productId, weight: 0.3, price: 200000 }],
+        },
+      });
+      const exportId = exportRes.body?.data?.export_id ?? exportRes.body?.data?.id;
+      const exportCancel = await api('PATCH', `/api/v1/exports/${exportId}/status`, {
+        token: adminToken,
+        body: { status: 'cancel' },
+      });
+      const exportAfter = exportId ? await prisma.exportHistory.findUnique({ where: { id: Number(exportId) } }) : null;
+      record(
+        '[STATUS] PATCH /exports/:id/status "cancel" → 200 + CANCELLED',
+        exportCancel.status === 200 && exportAfter?.status === 'CANCELLED',
+        `status=${exportCancel.status}, db=${exportAfter?.status}, body=${JSON.stringify(exportCancel.body).slice(0, 140)}`
+      );
+    } finally {
+      await teardownTestFarm();
+    }
+  }
+
   printSummary(SUITE);
 }
 
