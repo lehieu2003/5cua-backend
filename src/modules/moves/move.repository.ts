@@ -81,23 +81,41 @@ export class MoveRepository {
   }
 
   async getSummary(farmId?: number) {
-    const totalMoves = await prisma.stockPickingMove.count({
-      where: farmId
-        ? {
-            sourceBox: {
-              block: {
-                pond: {
-                  farmId,
-                },
+    const where = farmId
+      ? {
+          sourceBox: {
+            block: {
+              pond: {
+                farmId,
               },
             },
-          }
-        : undefined,
+          },
+        }
+      : undefined;
+
+    const totalMoves = await prisma.stockPickingMove.count({ where });
+
+    // Trọng lượng chuyển thật: mỗi move = 1 con, tính theo trọng lượng bình quân
+    // của lô đang nuôi ở HỘP ĐÍCH (initialWeight / initialQuantity).
+    const moves = await prisma.stockPickingMove.findMany({
+      where,
+      select: {
+        destBox: {
+          select: { batch: { select: { initialWeight: true, initialQuantity: true } } },
+        },
+      },
     });
+    let totalWeight = 0;
+    for (const m of moves) {
+      const b = m.destBox?.batch;
+      if (b && b.initialQuantity > 0) {
+        totalWeight += b.initialWeight / b.initialQuantity;
+      }
+    }
 
     return {
       total_quantity: totalMoves,
-      total_weight: parseFloat((totalMoves * 0.45).toFixed(1)),
+      total_weight: Number(totalWeight.toFixed(2)),
     };
   }
 

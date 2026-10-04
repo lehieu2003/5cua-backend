@@ -20,7 +20,7 @@ export class ExportService {
       totalCrabs: e.totalQty,
       total_weight: e.totalWeight,
       total_amount: e.totalAmount,
-      status: e.status.toLowerCase(),
+      status: e.status,
       note: e.note || '',
     }));
   }
@@ -79,7 +79,7 @@ export class ExportService {
       price_per_unit: pricePerUnit,
       type: 'export_sell',
       reason: 'Xuất bán',
-      status: exp.status.toLowerCase(),
+      status: exp.status,
       note: exp.note || '',
       boxes: exp.boxes,
     };

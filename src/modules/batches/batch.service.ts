@@ -37,7 +37,7 @@ export class BatchService {
       cost: b.cost,
       expected_revenue: b.expectedRevenue,
       expected_success_rate: b.expectedSuccessRate,
-      status: b.status.toLowerCase(),
+      status: b.status,
       note: b.note || '',
       images: b.images.map((img) => ({
         id: img.id,
@@ -335,7 +335,7 @@ export class BatchService {
       total_revenue: 0,
       expected_revenue: b.expectedRevenue,
       expected_success_rate: b.expectedSuccessRate,
-      status: b.status.toLowerCase(),
+      status: b.status,
       note,
       images: b.images.map((img) => ({
         id: img.id,

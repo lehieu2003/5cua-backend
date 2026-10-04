@@ -21,6 +21,7 @@ import prisma from '../../database/prisma.service';
  */
 
 const SKIP_PREFIXES = [
+  '/api/v1/auth',
   '/api/v1/feeding/products',
   '/api/v1/feeding/categories',
   '/api/v1/feeding/status',

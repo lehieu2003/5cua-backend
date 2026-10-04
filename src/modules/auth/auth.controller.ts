@@ -59,6 +59,34 @@ export class AuthController {
   /**
    * RESTful Logout: POST /api/v1/auth/logout
    */
+  /**
+   * RESTful Forgot Password: POST /api/v1/auth/forgot-password
+   */
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const result = await this.service.requestPasswordReset(req.body?.identifier);
+      return ResponseUtil.success(
+        res,
+        result,
+        'Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi'
+      );
+    } catch (error: any) {
+      return ResponseUtil.fromError(res, error);
+    }
+  }
+
+  /**
+   * RESTful Reset Password: POST /api/v1/auth/reset-password
+   */
+  async resetPassword(req: Request, res: Response) {
+    try {
+      await this.service.resetPassword(req.body);
+      return ResponseUtil.success(res, { success: true }, 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại');
+    } catch (error: any) {
+      return ResponseUtil.fromError(res, error);
+    }
+  }
+
   async logout(req: Request, res: Response) {
     try {
       await this.service.logout(req.body);
@@ -181,7 +209,19 @@ export class AuthController {
 
       sseService.addClient(userId, res);
 
+      // Heartbeat giữ kết nối sống: không có dữ liệu thì proxy/load balancer
+      // sẽ cắt kết nối idle (nginx mặc định 60s). Comment frame ': ping'
+      // không làm EventSource phát onmessage.
+      const heartbeat = setInterval(() => {
+        try {
+          res.write(': ping\n\n');
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, 25_000);
+
       req.on('close', () => {
+        clearInterval(heartbeat);
         sseService.removeClient(userId, res);
       });
     } catch (err) {

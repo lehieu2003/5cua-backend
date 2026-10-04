@@ -1,0 +1,77 @@
+name: Backend Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: 5cua_farm_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d 5cua_farm_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:password@localhost:5433/5cua_farm_db?schema=public
+      # Secret dành riêng cho CI — không dùng secret thật
+      JWT_ACCESS_SECRET: ci-only-access-secret-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SEED_ADMIN_PASSWORD: Admin@5cua123
+      NODE_ENV: test
+      TRUST_PROXY: 'false'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        run: npm run prisma:seed
+
+      - name: Start API server
+        run: |
+          npx tsx src/main.ts > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/health > /dev/null; then
+              echo "Server is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server failed to start"
+          cat server.log
+          exit 1
+
+      - name: Run E2E test suites
+        run: npm run test:e2e
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then kill $(cat server.pid) || true; fi

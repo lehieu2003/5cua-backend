@@ -33,7 +33,7 @@ export class MoveService {
       dest_block_name: m.destBox.block.name,
       move_at: m.movedAt.toISOString(),
       record_id: m.id.toString(),
-      status: m.status.toLowerCase(),
+      status: m.status,
       reason: m.reason || 'Sang ao chăm sóc',
     }));
   }
@@ -63,7 +63,7 @@ export class MoveService {
       dest_block_name: m.destBox.block.name,
       move_at: m.movedAt.toISOString(),
       record_id: m.id.toString(),
-      status: m.status.toLowerCase(),
+      status: m.status,
       reason: m.reason || 'Sang ao chăm sóc',
     };
   }

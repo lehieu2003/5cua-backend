@@ -13,7 +13,7 @@
     "prisma:studio": "prisma studio",
     "lint": "tsc --noEmit",
     "test": "tsx tests/test_rate_limiting.ts && tsx tests/test_refresh_token.ts",
-    "test:e2e": "tsx tests/e2e/e2e_auth.ts; tsx tests/e2e/e2e_security_guards.ts; tsx tests/e2e/e2e_batch_flow.ts; tsx tests/e2e/e2e_operations.ts; tsx tests/e2e/e2e_exports.ts; tsx tests/e2e/e2e_farm_scope.ts"
+    "test:e2e": "tsx tests/e2e/run-all.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",

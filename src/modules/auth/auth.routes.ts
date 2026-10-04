@@ -5,7 +5,16 @@ import { authGuard, optionalAuth } from '../../common/guards/auth.guard';
 import { roleGuard } from '../../common/guards/role.guard';
 import { authRateLimiter, refreshRateLimiter } from '../../common/middlewares/rate-limit.middleware';
 import { authController } from './auth.controller';
-import { LoginSchema, RegisterSchema, ChangePasswordSchema, UpdateProfileSchema, RefreshTokenSchema, LogoutSchema } from './auth.dto';
+import {
+  LoginSchema,
+  RegisterSchema,
+  ChangePasswordSchema,
+  UpdateProfileSchema,
+  RefreshTokenSchema,
+  LogoutSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+} from './auth.dto';
 
 const router = Router();
 
@@ -247,5 +256,7 @@ router.patch(
  *         description: Thử quá nhiều lần
  */
 router.post('/api/v1/auth/change-password', authGuard, authRateLimiter, validate(ChangePasswordSchema), asyncHandler((req, res) => authController.changePassword(req, res)));
+router.post('/api/v1/auth/forgot-password', authRateLimiter, validate(ForgotPasswordSchema), asyncHandler((req, res) => authController.forgotPassword(req, res)));
+router.post('/api/v1/auth/reset-password', authRateLimiter, validate(ResetPasswordSchema), asyncHandler((req, res) => authController.resetPassword(req, res)));
 
 export default router;

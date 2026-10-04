@@ -8,6 +8,8 @@ import { AppError } from '../../common/errors/app.error';
 import { MESSAGES } from '../../common/constants/messages.constant';
 import { UserRole } from '@prisma/client';
 import { sseService } from '../../common/services/sse.service';
+import { emailService } from '../../common/services/email.service';
+import prisma from '../../database/prisma.service';
 
 export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -420,6 +422,55 @@ export class AuthService {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
+  }
+
+  /**
+   * Yêu cầu đặt lại mật khẩu. LUÔN trả response chung chung (chống user-enumeration);
+   * token chỉ được "gửi" qua email transport (dev: console) và trả kèm response
+   * khi NODE_ENV=development để E2E/test tiện kiểm chứng.
+   */
+  async requestPasswordReset(identifier: string) {
+    const user = await this.repo.findByUsernameOrEmail(identifier.trim());
+    if (user && user.isActive) {
+      const token = crypto.randomBytes(32).toString('hex');
+      await this.repo.createPasswordResetToken({
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      });
+      await emailService.sendPasswordResetEmail(user.email, user.username, token);
+      return {
+        sent: true,
+        ...(env.isDev && { resetToken: token }),
+      };
+    }
+    // User không tồn tại/khóa — trả cùng shape, không resetToken
+    return { sent: true };
+  }
+
+  /**
+   * Đặt lại mật khẩu bằng token: token single-use (hash), hết hạn 15 phút.
+   * Sau khi đặt lại: thu hồi TOÀN BỘ refresh token của user (phiên cũ chết hết).
+   */
+  async resetPassword(dto: { token: string; newPassword: string }) {
+    const record = await this.repo.findPasswordResetToken(hashToken(dto.token));
+    if (!record || record.usedAt) {
+      throw AppError.badRequest('Mã đặt lại mật khẩu không hợp lệ');
+    }
+    if (new Date() > record.expiresAt) {
+      throw AppError.badRequest('Mã đặt lại mật khẩu đã hết hạn, vui lòng yêu cầu mã mới');
+    }
+    const user = await this.repo.findById(record.userId);
+    if (!user || !user.isActive) {
+      throw AppError.badRequest('Tài khoản không khả dụng');
+    }
+    const passwordHash = await argon2.hash(dto.newPassword);
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+      await tx.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+      await tx.refreshToken.updateMany({ where: { userId: record.userId }, data: { isRevoked: true } });
+    });
+    return { success: true };
   }
 
   async logout(dto: LogoutDto) {

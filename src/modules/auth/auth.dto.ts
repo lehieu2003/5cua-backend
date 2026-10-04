@@ -58,3 +58,15 @@ export type RefreshTokenDto = z.infer<typeof RefreshTokenSchema>;
 export type LogoutDto = z.infer<typeof LogoutSchema>;
 export type UserRoleType = z.infer<typeof UserRoleEnum>;
 export type MemberType = z.infer<typeof MemberTypeEnum>;
+
+export const ForgotPasswordSchema = z.object({
+  identifier: z.string().min(3, 'Nhập tên đăng nhập hoặc email'),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(10, 'Mã đặt lại mật khẩu không hợp lệ'),
+  newPassword: z.string().min(6, 'Mật khẩu mới phải có ít nhất 6 ký tự'),
+});
+
+export type ForgotPasswordDto = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;

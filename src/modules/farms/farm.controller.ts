@@ -64,20 +64,7 @@ export class FarmController {
     }
   }
 
-  async getFarmTasks(req: Request, res: Response) {
-    try {
-      const farmId = parseInt(req.params.id, 10);
-      const { taskType, keyword } = req.query;
-      const tasks = await this.service.getFarmTasks(
-        farmId,
-        taskType as string | undefined,
-        keyword as string | undefined
-      );
-      return ResponseUtil.success(res, tasks);
-    } catch (error: any) {
-      return ResponseUtil.fromError(res, error);
-    }
-  }
+
 }
 
 export const farmController = new FarmController();

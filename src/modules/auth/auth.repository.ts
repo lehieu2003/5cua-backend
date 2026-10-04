@@ -228,6 +228,41 @@ export class AuthRepository {
       data: { isRevoked: true },
     });
   }
+  async createPasswordResetToken(data: {
+    userId: number;
+    tokenHash: string;
+    expiresAt: Date;
+  }) {
+    return prisma.passwordResetToken.create({
+      data: {
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      },
+    });
+  }
+
+  async findPasswordResetToken(tokenHash: string) {
+    return prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
+  }
+
+  async markPasswordResetTokenUsed(id: number) {
+    return prisma.passwordResetToken.update({
+      where: { id },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async findByUsernameOrEmail(identifier: string) {
+    return prisma.user.findFirst({
+      where: {
+        OR: [{ username: identifier }, { email: identifier }],
+      },
+      select: { id: true, username: true, email: true, isActive: true },
+    });
+  }
 }
 
 export const authRepository = new AuthRepository();

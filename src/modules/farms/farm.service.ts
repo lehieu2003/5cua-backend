@@ -28,9 +28,7 @@ export class FarmService {
     return this.repo.findOperations(farmId, fromDate, toDate);
   }
 
-  async getFarmTasks(farmId: number, taskType?: string, keyword?: string) {
-    return [];
-  }
+
 
   async createFarm(dto: CreateFarmDto) {
     return this.repo.createFarm(dto);

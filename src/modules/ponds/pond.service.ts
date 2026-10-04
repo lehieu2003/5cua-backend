@@ -141,7 +141,7 @@ export class PondService {
         posz: box.block.posZ,
         row: box.row,
         column: box.column,
-        status: box.status.toLowerCase(),
+        status: box.status,
         product_id: box.productId,
         product_name: box.product?.name || '',
         feed_id: box.feedStatusId,

@@ -233,6 +233,36 @@ export class BatchRepository {
       );
     }
 
+    // Ràng buộc chuyển tiếp trạng thái:
+    //   DRAFT → IN_PROGRESS | COMPLETED | CANCELLED
+    //   IN_PROGRESS → COMPLETED | CANCELLED
+    //   COMPLETED / CANCELLED là trạng thái cuối — không đổi nữa.
+    const current = await prisma.stockImportBatch.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (!current) {
+      throw AppError.notFound('Không tìm thấy đợt nhập');
+    }
+    const from = current.status;
+    const terminal: BatchStatus[] = [BatchStatus.COMPLETED, BatchStatus.CANCELLED];
+    const allowed: Record<BatchStatus, BatchStatus[]> = {
+      [BatchStatus.DRAFT]: [BatchStatus.IN_PROGRESS, BatchStatus.COMPLETED, BatchStatus.CANCELLED],
+      [BatchStatus.IN_PROGRESS]: [BatchStatus.COMPLETED, BatchStatus.CANCELLED],
+      [BatchStatus.COMPLETED]: [],
+      [BatchStatus.CANCELLED]: [],
+    };
+    if (terminal.includes(from) && dbStatus !== from) {
+      throw AppError.badRequest(
+        `Đợt nhập đã ở trạng thái cuối "${from}", không thể chuyển sang "${dbStatus}"`
+      );
+    }
+    if (from !== dbStatus && !allowed[from].includes(dbStatus)) {
+      throw AppError.badRequest(
+        `Không thể chuyển trạng thái từ "${from}" sang "${dbStatus}"`
+      );
+    }
+
     return prisma.stockImportBatch.update({
       where: { id },
       data: { status: dbStatus },

@@ -72,7 +72,7 @@ export class FeedingService {
         pondId: r.pondId,
         pond_name: r.pond.name,
         pondName: r.pond.name,
-        action_type: r.actionType.toLowerCase(),
+        action_type: r.actionType,
         actionType: r.actionType,
         crab_type: crabType,
         crabType: crabType,
