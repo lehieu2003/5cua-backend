@@ -57,19 +57,33 @@ export class MoveRepository {
     });
   }
 
-  async getMoveHistory(farmId?: number, offset = 0) {
+  async getMoveHistory(farmId?: number, offset = 0, filters?: { status?: string; keyword?: string; from?: Date; to?: Date }) {
+    const allowed: string[] = Object.values(MoveStatus);
+    const rawStatus = (filters?.status || '').toString().toUpperCase().trim();
+    const normalizedStatus =
+      rawStatus === 'CANCEL' || rawStatus === 'CANCELED' ? 'CANCELLED' : rawStatus;
+    // Filter status lạ (mobile có thể gửi thừa) → bỏ qua thay vì 500 cả list
+    const status = allowed.includes(normalizedStatus) ? normalizedStatus : undefined;
+
+    const where: any = {
+      ...(farmId && { sourceBox: { block: { pond: { farmId } } } }),
+      ...(status && { status: status as MoveStatus }),
+      ...((filters?.from || filters?.to) && {
+        movedAt: {
+          ...(filters?.from && { gte: filters.from }),
+          ...(filters?.to && { lte: filters.to }),
+        },
+      }),
+    };
+    if (filters?.keyword) {
+      where.OR = [
+        { sourceBox: { code: { contains: filters.keyword, mode: 'insensitive' } } },
+        { destBox: { code: { contains: filters.keyword, mode: 'insensitive' } } },
+      ];
+    }
+
     return prisma.stockPickingMove.findMany({
-      where: farmId
-        ? {
-            sourceBox: {
-              block: {
-                pond: {
-                  farmId,
-                },
-              },
-            },
-          }
-        : undefined,
+      where,
       include: {
         sourceBox: { include: { block: { include: { pond: true } } } },
         destBox: { include: { block: { include: { pond: true } } } },

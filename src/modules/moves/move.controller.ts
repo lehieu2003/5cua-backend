@@ -44,7 +44,18 @@ export class MoveController {
     try {
       const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
-      const moves = await this.service.getMoveList(farmId, offset);
+
+      // Filter theo contract mobile: status, keyword, datetime_now_from/to
+      const fromRaw = (req.query.datetime_now_from || req.query.from) as string | undefined;
+      const toRaw = (req.query.datetime_now_to || req.query.to) as string | undefined;
+      const from = fromRaw ? new Date(fromRaw) : undefined;
+      const to = toRaw ? new Date(toRaw) : undefined;
+      const moves = await this.service.getMoveList(farmId, offset, {
+        status: (req.query.status as string) || undefined,
+        keyword: (req.query.keyword as string) || undefined,
+        from: from && !isNaN(from.getTime()) ? from : undefined,
+        to: to && !isNaN(to.getTime()) ? to : undefined,
+      });
       return ResponseUtil.success(res, moves);
     } catch (error: any) {
       return ResponseUtil.fromError(res, error);

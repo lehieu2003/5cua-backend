@@ -271,6 +271,116 @@ async function run() {
     }
   }
 
+  // ── MOB-FILTER: GET /exports, /moves nhận filter + pond list có field mobile đọc ──
+  {
+    const f = await setupTestFarm();
+    try {
+      const ts = Date.now();
+      const batchRes = await api('POST', '/api/v1/batches', {
+        token: adminToken,
+        body: {
+          farmId: f.farmId,
+          name: `E2E-BATCH-FILTER-${ts}`,
+          productId: f.productId,
+          importDate: new Date().toISOString().slice(0, 10),
+          initialQuantity: 10,
+          initialWeight: 4,
+          warehouses: [{
+            id: String(f.farmId),
+            product_uom_qty: '10',
+            blocks: [{ id: String(f.blockId), locations: [{ id: String(f.emptyBoxIds[0]) }, { id: String(f.emptyBoxIds[1]) }] }],
+          }],
+        },
+      });
+      if (!(batchRes.status === 200 || batchRes.status === 201)) {
+        throw new Error(`Tạo batch fixture lỗi: ${JSON.stringify(batchRes.body).slice(0, 160)}`);
+      }
+
+      const exportRes = await api('POST', '/api/v1/exports', {
+        token: adminToken,
+        body: { farmId: f.farmId, partnerName: 'Filter E2E', boxes: [{ boxId: f.emptyBoxIds[0], productId: f.productId, weight: 0.2, price: 100000 }] },
+      });
+      const exportId = exportRes.body?.data?.export_id ?? exportRes.body?.data?.id;
+      await api('PATCH', `/api/v1/exports/${exportId}/status`, { token: adminToken, body: { status: 'done' } });
+
+      const moveRes = await api('POST', '/api/v1/moves', {
+        token: adminToken,
+        body: { source_box_id: f.emptyBoxIds[1], dest_box_id: f.emptyBoxIds[2], reason: 'filter e2e' },
+      });
+      const moveId = moveRes.body?.data?.move_id ?? moveRes.body?.data?.id;
+
+      // 1) Filter status của exports
+      const listDone = await api('GET', `/api/v1/exports?farmId=${f.farmId}&status=done`, { token: adminToken });
+      const rowsDone = listDone.body?.data ?? [];
+      const listCancel = await api('GET', `/api/v1/exports?farmId=${f.farmId}&status=cancelled`, { token: adminToken });
+      const rowsCancel = listCancel.body?.data ?? [];
+      record(
+        '[FILTER] GET /exports?status=done trả đúng phiếu DONE',
+        listDone.status === 200 && rowsDone.some((e: any) => String(e.id) === String(exportId)),
+        `status=${listDone.status}, rows=${rowsDone.length}`
+      );
+      record(
+        '[FILTER] GET /exports?status=cancelled loại hết (filter phải có tác dụng)',
+        listCancel.status === 200 && !rowsCancel.some((e: any) => String(e.id) === String(exportId)),
+        `status=${listCancel.status}, rows=${rowsCancel.length}`
+      );
+
+      // 2) Filter datetime (mobile gửi key datetime_now_from/to)
+      const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+      const future = fmt(new Date(Date.now() + 24 * 3600 * 1000));
+      const listFuture = await api('GET', `/api/v1/exports?farmId=${f.farmId}&datetime_now_from=${encodeURIComponent(future)}`, { token: adminToken });
+      record(
+        '[FILTER] GET /exports?datetime_now_from=tương lai → 0 rows',
+        listFuture.status === 200 && (listFuture.body?.data ?? []).length === 0,
+        `status=${listFuture.status}, rows=${(listFuture.body?.data ?? []).length}`
+      );
+
+      // 3) List /exports có type + reason (mobile đọc 2 field này)
+      const listAll = await api('GET', `/api/v1/exports?farmId=${f.farmId}`, { token: adminToken });
+      const item0 = (listAll.body?.data ?? [])[0] ?? {};
+      record(
+        '[FILTER] list /exports có type=export_sell + reason',
+        item0.type === 'export_sell' && typeof item0.reason === 'string',
+        `type=${item0.type}, reason=${item0.reason}`
+      );
+
+      // 4) Filter status của moves
+      const mvDone = await api('GET', `/api/v1/moves?farmId=${f.farmId}&status=done`, { token: adminToken });
+      const mvCancel = await api('GET', `/api/v1/moves?farmId=${f.farmId}&status=cancel`, { token: adminToken });
+      record(
+        '[FILTER] GET /moves?status=done có move vừa tạo',
+        mvDone.status === 200 && (mvDone.body?.data ?? []).some((m: any) => String(m.id) === String(moveId)),
+        `status=${mvDone.status}, rows=${(mvDone.body?.data ?? []).length}`
+      );
+      record(
+        '[FILTER] GET /moves?status=cancel loại hết',
+        mvCancel.status === 200 && !(mvCancel.body?.data ?? []).some((m: any) => String(m.id) === String(moveId)),
+        `status=${mvCancel.status}, rows=${(mvCancel.body?.data ?? []).length}`
+      );
+
+      // 5) Pond list có last_water_check + last_inspection_cleaning_check
+      const param = await prisma.waterParameter.findFirst({ orderBy: { ordinal: 'asc' } });
+      const wcPost = await api('POST', '/api/v1/water/checks', {
+        token: adminToken,
+        body: { warehouseId: String(f.pondId), waterChecks: [{ id: String(param?.id), value_id: '1' }] },
+      });
+      const pondList = await api('GET', `/api/v1/ponds?farmId=${f.farmId}`, { token: adminToken });
+      const pondItem = (pondList.body?.data ?? [])[0] ?? {};
+      record(
+        '[FILTER] pond list có last_water_check (đúng lần đo vừa tạo)',
+        pondList.status === 200 && pondItem.last_water_check?.check_date !== undefined,
+        `wcPOST=${wcPost.status} ${JSON.stringify(wcPost.body).slice(0, 100)}, last_water_check=${JSON.stringify(pondItem.last_water_check ?? null).slice(0, 100)}`
+      );
+      record(
+        '[FILTER] pond list có key last_inspection_cleaning_check',
+        pondList.status === 200 && pondItem.last_inspection_cleaning_check !== undefined,
+        `value=${JSON.stringify(pondItem.last_inspection_cleaning_check ?? null).slice(0, 100)}`
+      );
+    } finally {
+      await teardownTestFarm();
+    }
+  }
+
   printSummary(SUITE);
 }
 

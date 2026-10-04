@@ -13,8 +13,8 @@ export class MoveService {
     };
   }
 
-  async getMoveList(farmId?: number, offset = 0) {
-    const moves = await this.repo.getMoveHistory(farmId, offset);
+  async getMoveList(farmId?: number, offset = 0, filters?: { status?: string; keyword?: string; from?: Date; to?: Date }) {
+    const moves = await this.repo.getMoveHistory(farmId, offset, filters);
     return moves.map((m) => ({
       id: m.id,
       code: `MOVE-${m.id}`,

@@ -16,7 +16,20 @@ export class ExportController {
       const farmId = (req.query.farmId || req.query.farm_id) ? parseInt((req.query.farmId || req.query.farm_id) as string, 10) : undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
 
-      const data = await this.service.getExportList(farmId, offset);
+      // Filter theo contract mobile: status, keyword, datetime_now_from/to
+      const status = (req.query.status as string) || undefined;
+      const keyword = (req.query.keyword as string) || undefined;
+      const fromRaw = (req.query.datetime_now_from || req.query.from) as string | undefined;
+      const toRaw = (req.query.datetime_now_to || req.query.to) as string | undefined;
+      const from = fromRaw ? new Date(fromRaw) : undefined;
+      const to = toRaw ? new Date(toRaw) : undefined;
+
+      const data = await this.service.getExportList(farmId, offset, {
+        status,
+        keyword,
+        from: from && !isNaN(from.getTime()) ? from : undefined,
+        to: to && !isNaN(to.getTime()) ? to : undefined,
+      });
       return ResponseUtil.success(res, data);
     } catch (error: any) {
       return ResponseUtil.fromError(res, error);

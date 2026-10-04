@@ -1,3 +1,4 @@
+import prisma from '../../database/prisma.service';
 import { pondRepository, PondRepository } from './pond.repository';
 import { CreatePondDto, FilterBoxDto } from './pond.dto';
 import { AppError } from '../../common/errors/app.error';
@@ -7,6 +8,36 @@ export class PondService {
 
   async getPondsByFarm(farmId: number, keyword?: string) {
     const ponds = await this.repo.findByFarmId(farmId, keyword);
+
+    // Lần đo nước / kiểm tra vệ sinh mới nhất của từng ao (mobile đọc 2 field này)
+    const pondIds = ponds.map((p) => p.id);
+    const lastChecks = pondIds.length
+      ? await prisma.waterCheckHistory.findMany({
+          where: { pondId: { in: pondIds } },
+          orderBy: [{ pondId: 'asc' }, { checkDate: 'desc' }],
+          distinct: ['pondId'],
+        })
+      : [];
+    const lastCheckByPond = new Map(
+      lastChecks.map((w) => [w.pondId, w] as const)
+    );
+
+    const lastCleanings = pondIds.length
+      ? await prisma.inspectionCleaningRecord.findMany({
+          where: { pondId: { in: pondIds } },
+          orderBy: [{ pondId: 'asc' }, { checkDate: 'desc' }],
+          distinct: ['pondId'],
+        })
+      : [];
+    const lastCleaningByPond = new Map(
+      lastCleanings.map((r) => [r.pondId, r] as const)
+    );
+    const shapeIds = [...new Set(lastCleanings.map((r) => r.shapeStatusId).filter((x): x is number => x != null))];
+    const feedIds = [...new Set(lastCleanings.map((r) => r.feedStatusId).filter((x): x is number => x != null))];
+    const shapes = shapeIds.length ? await prisma.shapeStatusMaster.findMany({ where: { id: { in: shapeIds } } }) : [];
+    const feeds = feedIds.length ? await prisma.feedingStatusMaster.findMany({ where: { id: { in: feedIds } } }) : [];
+    const shapeById = new Map(shapes.map((s) => [s.id, s]));
+    const feedById = new Map(feeds.map((s) => [s.id, s]));
 
     // Chuyển đổi sang format PondModel hoàn chỉnh 100% khớp với Flutter Dart
     return ponds.map((p) => {
@@ -42,6 +73,11 @@ export class PondService {
       const percentAchieved =
         p.totalBox > 0 ? (occupiedCount / p.totalBox) * 100 : 0;
 
+      const lastCheck = lastCheckByPond.get(p.id);
+      const lastCleaning = lastCleaningByPond.get(p.id);
+      const cleaningShape = lastCleaning?.shapeStatusId ? shapeById.get(lastCleaning.shapeStatusId) : null;
+      const cleaningFeed = lastCleaning?.feedStatusId ? feedById.get(lastCleaning.feedStatusId) : null;
+
       return {
         id: p.id,
         location_id: p.id,
@@ -63,6 +99,23 @@ export class PondService {
         status_data: [],
         volume: p.volume,
         area: p.area,
+        last_water_check: lastCheck
+          ? {
+              check_date: lastCheck.checkDate.toISOString(),
+              status_check: lastCheck.hasWarning ? 'warning' : 'good',
+            }
+          : null,
+        last_inspection_cleaning_check: lastCleaning
+          ? {
+              id: lastCleaning.id,
+              check_date: lastCleaning.checkDate.toISOString(),
+              shape: cleaningShape ? { id: cleaningShape.id, name: cleaningShape.name } : null,
+              feed: cleaningFeed ? { id: cleaningFeed.id, name: cleaningFeed.name } : null,
+              soft_shell: lastCleaning.softShellQuantity,
+              dead_quantity: lastCleaning.deadQuantity,
+              stock_quantity: occupiedCount,
+            }
+          : null,
       };
     });
   }

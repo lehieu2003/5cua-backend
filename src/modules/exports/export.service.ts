@@ -1,13 +1,24 @@
 import prisma from '../../database/prisma.service';
 import { AppError } from '../../common/errors/app.error';
-import { exportRepository, ExportRepository } from './export.repository';
+import { exportRepository, ExportRepository, type ExportListFilters } from './export.repository';
 import { CreateExportDto } from './export.dto';
+
+// Mobile gửi trạng thái kiểu legacy/lowercase ('cancel', 'done', 'MỚI'...) — map về enum
+const EXPORT_STATUS_ALIASES: Record<string, string> = {
+  DRAFT: 'DRAFT', NEW: 'DRAFT', 'MỚI': 'DRAFT',
+  CONFIRMED: 'CONFIRMED', 'ĐÃ XÁC NHẬN': 'CONFIRMED',
+  DONE: 'DONE', COMPLETED: 'DONE', ACTIVE: 'DONE', 'HOÀN THÀNH': 'DONE',
+  CANCEL: 'CANCELLED', CANCELED: 'CANCELLED', CANCELLED: 'CANCELLED', 'ĐÃ HỦY': 'CANCELLED',
+};
 
 export class ExportService {
   constructor(private readonly repo: ExportRepository = exportRepository) {}
 
-  async getExportList(farmId?: number, offset = 0) {
-    const exports = await this.repo.findExports(farmId, offset);
+  async getExportList(farmId?: number, offset = 0, filters?: ExportListFilters) {
+    const status = filters?.status
+      ? EXPORT_STATUS_ALIASES[String(filters.status).toUpperCase().trim()]
+      : undefined;
+    const exports = await this.repo.findExports(farmId, offset, { ...filters, status });
 
     return exports.map((e) => ({
       id: e.id,
@@ -22,6 +33,9 @@ export class ExportService {
       total_amount: e.totalAmount,
       status: e.status,
       note: e.note || '',
+      // Mobile đọc 2 field này ở list (hiện chỉ có ở detail)
+      type: 'export_sell' as const,
+      reason: 'Xuất bán',
     }));
   }
 

@@ -2,11 +2,31 @@ import prisma from '../../database/prisma.service';
 import { BoxStatus, ExportStatus } from '@prisma/client';
 import { AppError } from '../../common/errors/app.error';
 
+export interface ExportListFilters {
+  status?: string;
+  keyword?: string;
+  from?: Date;
+  to?: Date;
+}
+
 export class ExportRepository {
-  async findExports(farmId?: number, offset = 0) {
+  async findExports(farmId?: number, offset = 0, filters?: ExportListFilters) {
     return prisma.exportHistory.findMany({
       where: {
         ...(farmId && { farmId }),
+        ...(filters?.status && { status: filters.status as ExportStatus }),
+        ...(filters?.keyword && {
+          OR: [
+            { code: { contains: filters.keyword, mode: 'insensitive' } },
+            { partnerName: { contains: filters.keyword, mode: 'insensitive' } },
+          ],
+        }),
+        ...((filters?.from || filters?.to) && {
+          exportDate: {
+            ...(filters?.from && { gte: filters.from }),
+            ...(filters?.to && { lte: filters.to }),
+          },
+        }),
       },
       include: {
         boxes: true,
