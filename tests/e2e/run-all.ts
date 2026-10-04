@@ -13,6 +13,7 @@ const SUITES = [
   'tests/e2e/e2e_exports.ts',
   'tests/e2e/e2e_farm_scope.ts',
   'tests/e2e/e2e_password_reset.ts',
+  'tests/e2e/e2e_mobile_sync.ts',
 ];
 
 const failed: string[] = [];

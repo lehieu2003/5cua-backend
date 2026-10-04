@@ -143,9 +143,18 @@ export const farmAccessGuard = async (
       parseId(req.body?.farm_id) ??
       parseId(req.params?.farmId);
 
-    // 1b) pondId trên query (VD: GET /water/checks?pondId=) → resolve về farm
+    // 1b) pondId/warehouseId → resolve về farm. Mobile gửi warehouseId thay
+    // cho pondId (water/inspections) và có thể đặt pondId trong body (feeding).
     if (!farmId) {
-      const pondQ = parseId(req.query.pondId) ?? parseId((req.query as any).pond_id);
+      const pondQ =
+        parseId(req.query.pondId) ??
+        parseId((req.query as any).pond_id) ??
+        parseId(req.body?.pondId) ??
+        parseId(req.body?.pond_id) ??
+        parseId((req.query as any).warehouseId) ??
+        parseId((req.query as any).warehouse_id) ??
+        parseId(req.body?.warehouseId) ??
+        parseId(req.body?.warehouse_id);
       if (pondQ) {
         const pond = await prisma.pond.findUnique({
           where: { id: pondQ },
