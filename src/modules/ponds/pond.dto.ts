@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 export const CreatePondSchema = z.object({
   farmId: z.number().int().positive('farmId is required'),
-  code: z.string().min(1, 'Code is required'),
+  // Mobile không có field code — backend tự sinh khi thiếu
+  code: z.string().min(1).optional(),
   name: z.string().min(1, 'Name is required'),
   pondType: z.string().default('box_grid'),
   numBlock: z.number().int().positive().default(1),

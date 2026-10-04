@@ -182,6 +182,33 @@ async function run() {
     }
   }
 
+  // ── MOB-POND: mobile tạo ao không có field code → backend tự sinh ──
+  {
+    const ownerToken = await login('owner_baclieu', 'Admin@5cua123');
+    const pondRes = await api('POST', '/api/v1/ponds', {
+      token: ownerToken,
+      body: {
+        farmId: farm1.id,
+        name: `E2E Pond Mobile ${Date.now()}`,
+        pondType: 'box_grid',
+        numBlock: 1,
+        numRow: 2,
+        numColumn: 2,
+      },
+    });
+    const createdPondId = pondRes.body?.data?.id;
+    const createdPondCode = pondRes.body?.data?.code;
+    record(
+      '[POND] POST /ponds không có code → 201 + code tự sinh POND-*',
+      (pondRes.status === 201 || pondRes.status === 200) &&
+        typeof createdPondCode === 'string' && createdPondCode.startsWith('POND-'),
+      `status=${pondRes.status}, code=${createdPondCode}, body=${JSON.stringify(pondRes.body).slice(0, 140)}`
+    );
+    if (createdPondId) {
+      await prisma.pond.delete({ where: { id: Number(createdPondId) } }).catch(() => {});
+    }
+  }
+
   printSummary(SUITE);
 }
 

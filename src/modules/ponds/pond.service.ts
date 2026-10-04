@@ -122,7 +122,8 @@ export class PondService {
   }
 
   async createPond(dto: CreatePondDto) {
-    return this.repo.createPondWithGrid(dto);
+    const code = dto.code?.trim() || `POND-${Date.now()}`;
+    return this.repo.createPondWithGrid({ ...dto, code });
   }
 
   async filterBoxes(dto: FilterBoxDto) {
