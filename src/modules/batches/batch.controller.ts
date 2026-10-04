@@ -92,6 +92,24 @@ export class BatchController {
   }
 
   /**
+   * REST: POST /api/v1/batches/:id/assign — mobile gửi phân bổ ao theo tên
+   */
+  async assignDistribution(req: Request, res: Response) {
+    const batchId = parseInt(req.params.id, 10);
+    const result = await this.service.assignDistribution(batchId, req.body?.distribution);
+    operationLogService
+      .log({
+        userId: (req as AuthenticatedRequest).user?.userId,
+        farmId: (result as any)?.farmId,
+        batchId,
+        action: 'ASSIGN_BATCH_DISTRIBUTION',
+        details: { batch_id: batchId, assigned: (result as any)?.assigned },
+      })
+      .catch(() => {});
+    return ResponseUtil.success(res, result, 'Lưu phân bổ ao thành công', 201);
+  }
+
+  /**
    * REST: PATCH /api/v1/batches/:id/status
    */
   async updateBatchStatus(req: Request, res: Response) {

@@ -65,6 +65,7 @@ router.get('/api/v1/batches', authGuard, asyncHandler((req, res) => batchControl
 router.get('/api/v1/batches/summary', authGuard, asyncHandler((req, res) => batchController.getBatchesSummary(req, res)));
 router.post('/api/v1/batches', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => batchController.createBatch(req, res)));
 router.get('/api/v1/batches/:id', authGuard, asyncHandler((req, res) => batchController.getBatchDetail(req, res)));
+router.post('/api/v1/batches/:id/assign', authGuard, asyncHandler((req, res) => batchController.assignDistribution(req, res)));
 router.patch('/api/v1/batches/:id/status', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => batchController.updateBatchStatus(req, res)));
 
 export default router;

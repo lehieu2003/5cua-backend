@@ -209,6 +209,68 @@ async function run() {
     }
   }
 
+  // ── MOB-ASSIGN: POST /batches/:id/assign (mobile gửi distribution theo TÊN ao) ──
+  {
+    const f = await setupTestFarm();
+    try {
+      const ts = Date.now();
+      const batchRes = await api('POST', '/api/v1/batches', {
+        token: adminToken,
+        body: {
+          farmId: f.farmId,
+          name: `E2E-BATCH-ASSIGN-${ts}`,
+          productId: f.productId,
+          importDate: new Date().toISOString().slice(0, 10),
+          initialQuantity: 10,
+          initialWeight: 4,
+          warehouses: [{
+            id: String(f.farmId),
+            product_uom_qty: '10',
+            blocks: [{ id: String(f.blockId), locations: [{ id: String(f.emptyBoxIds[0]) }] }],
+          }],
+        },
+      });
+      const batchId = batchRes.body?.data?.id;
+      if (!(batchRes.status === 200 || batchRes.status === 201) || !batchId) {
+        throw new Error(`Tạo batch fixture lỗi: ${JSON.stringify(batchRes.body).slice(0, 160)}`);
+      }
+
+      const fixturePond = await prisma.pond.findUnique({ where: { id: f.pondId } });
+      // Đúng shape mobile gửi: id/name là TÊN ao, quantity là số con
+      const assign = await api('POST', `/api/v1/batches/${batchId}/assign`, {
+        token: adminToken,
+        body: {
+          distribution: [{ id: fixturePond?.name, name: fixturePond?.name, quantity: 10 }],
+        },
+      });
+      const batchAfter = await prisma.stockImportBatch.findUnique({ where: { id: Number(batchId) } });
+      const marker = (batchAfter?.note || '').split('[POND_DISTRIBUTION]:')[1];
+      let parsedOk = false;
+      try {
+        const arr = JSON.parse(marker || '""');
+        parsedOk = Array.isArray(arr) && Number(arr[0]?.id) === f.pondId;
+      } catch { parsedOk = false; }
+      record(
+        '[ASSIGN] POST /batches/:id/assign (distribution theo tên ao) → 2xx + lưu distribution',
+        (assign.status === 200 || assign.status === 201) && parsedOk,
+        `status=${assign.status}, note=${(batchAfter?.note || '').slice(0, 120)}, body=${JSON.stringify(assign.body).slice(0, 120)}`
+      );
+
+      // Tên ao không tồn tại → 400, không crash
+      const assignBad = await api('POST', `/api/v1/batches/${batchId}/assign`, {
+        token: adminToken,
+        body: { distribution: [{ id: 'Ao Không Tồn Tại', name: 'Ao Không Tồn Tại', quantity: 1 }] },
+      });
+      record(
+        '[ASSIGN] assign với tên ao lạ → 400',
+        assignBad.status === 400,
+        `status=${assignBad.status}, body=${JSON.stringify(assignBad.body).slice(0, 120)}`
+      );
+    } finally {
+      await teardownTestFarm();
+    }
+  }
+
   printSummary(SUITE);
 }
 

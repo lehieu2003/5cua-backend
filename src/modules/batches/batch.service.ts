@@ -349,6 +349,62 @@ export class BatchService {
   async updateBatchStatus(batchId: number, status: string) {
     return this.repo.updateStatus(batchId, status.toUpperCase() as any);
   }
+
+  /**
+   * POST /batches/:id/assign — mobile gửi phân bổ ao theo TÊN ao
+   * (`{distribution: [{id: '<tên ao>', name, quantity}]}`) sau khi đã tạo đợt.
+   * Resolve về pondId trong farm của đợt rồi lưu vào marker
+   * `[POND_DISTRIBUTION]:` theo shape warehouses để GET /batches/:id hiểu.
+   */
+  async assignDistribution(batchId: number, distribution: any[]) {
+    const batch = await this.repo.findById(batchId);
+    if (!batch) {
+      throw AppError.notFound(MESSAGES.BATCH.NOT_FOUND);
+    }
+    if (!Array.isArray(distribution) || distribution.length === 0) {
+      throw AppError.badRequest('Vui lòng cung cấp danh sách phân bổ ao (distribution)');
+    }
+
+    const resolved: Array<{ pondId: number; name: string; quantity: number }> = [];
+    const unknown: string[] = [];
+    for (const item of distribution) {
+      const quantity = parseInt(String(item?.quantity ?? 0), 10) || 0;
+      const rawId = String(item?.id ?? item?.pondId ?? '').trim();
+      let pond: { id: number; name: string } | null = null;
+      const numericId = parseInt(rawId, 10);
+      if (Number.isFinite(numericId) && String(numericId) === rawId) {
+        pond = await prisma.pond.findFirst({ where: { id: numericId, farmId: batch.farmId } });
+      }
+      if (!pond) {
+        const name = rawId || String(item?.name ?? '').trim();
+        pond = name
+          ? await prisma.pond.findFirst({
+              where: { farmId: batch.farmId, name: { equals: name, mode: 'insensitive' } },
+            })
+          : null;
+      }
+      if (!pond) {
+        unknown.push(String(item?.name ?? item?.id ?? '?'));
+        continue;
+      }
+      resolved.push({ pondId: pond.id, name: pond.name, quantity });
+    }
+    if (unknown.length > 0) {
+      throw AppError.badRequest(`Không tìm thấy ao trong trại: ${unknown.join(', ')}`);
+    }
+
+    const warehousesCompat = resolved.map((r) => ({
+      id: String(r.pondId),
+      name: r.name,
+      product_uom_qty: String(r.quantity),
+      blocks: [],
+    }));
+    const baseNote = (batch.note || '').split('[POND_DISTRIBUTION]:')[0].trim();
+    const note = `${baseNote}\n[POND_DISTRIBUTION]:${JSON.stringify(warehousesCompat)}`.trim();
+    await prisma.stockImportBatch.update({ where: { id: batchId }, data: { note } });
+
+    return { status: 'success', assigned: resolved.length, farmId: batch.farmId };
+  }
 }
 
 export const batchService = new BatchService();
