@@ -1,5 +1,6 @@
 import prisma from '../../database/prisma.service';
 import { BoxStatus, ExportStatus } from '@prisma/client';
+import { AppError } from '../../common/errors/app.error';
 
 export class ExportRepository {
   async findExports(farmId?: number, offset = 0) {
@@ -32,7 +33,32 @@ export class ExportRepository {
       totalAmount += b.weight * b.price;
     }
 
+    if (new Set(data.boxes.map((b) => b.boxId)).size !== data.boxes.length) {
+      throw AppError.badRequest('Phiếu xuất chứa hộp bị trùng lặp');
+    }
+
     return prisma.$transaction(async (tx) => {
+      // 0. Kiểm tra từng hộp phải đang OCCUPIED và thuộc farm của phiếu xuất
+      const boxRows = await tx.box.findMany({
+        where: { id: { in: data.boxes.map((b) => b.boxId) } },
+        include: { block: { include: { pond: true } } },
+      });
+      const boxById = new Map(boxRows.map((bx) => [bx.id, bx]));
+      for (const b of data.boxes) {
+        const box = boxById.get(b.boxId);
+        if (!box) {
+          throw AppError.notFound(`Hộp #${b.boxId} không tồn tại`);
+        }
+        if (box.status !== BoxStatus.OCCUPIED) {
+          throw AppError.badRequest(
+            `Hộp ${box.code} không có cua đang nuôi (trạng thái: ${box.status}) — không thể xuất bán`
+          );
+        }
+        if (box.block.pond.farmId !== data.farmId) {
+          throw AppError.badRequest(`Hộp ${box.code} không thuộc trang trại của phiếu xuất`);
+        }
+      }
+
       // 1. Tạo phiếu xuất bán
       const exp = await tx.exportHistory.create({
         data: {
@@ -89,6 +115,11 @@ export class ExportRepository {
     else if (s === 'CONFIRMED' || s === 'ĐÃ XÁC NHẬN') dbStatus = ExportStatus.CONFIRMED;
     else if (s === 'DONE' || s === 'COMPLETED' || s === 'ACTIVE' || s === 'HOÀN THÀNH') dbStatus = ExportStatus.DONE;
     else if (s === 'CANCEL' || s === 'CANCELLED' || s === 'CANCELED' || s === 'ĐÃ HỦY') dbStatus = ExportStatus.CANCELLED;
+    else if (s) {
+      throw AppError.badRequest(
+        `Trạng thái phiếu xuất không hợp lệ: "${status}". Cho phép: DRAFT, CONFIRMED, DONE, CANCELLED`
+      );
+    }
 
     return prisma.exportHistory.update({
       where: { id },

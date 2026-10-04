@@ -152,6 +152,7 @@ export class PondRepository {
       include: {
         product: true,
         block: true,
+        batch: true,
       },
       orderBy: [{ block: { posZ: 'asc' } }, { row: 'asc' }, { column: 'asc' }],
     });

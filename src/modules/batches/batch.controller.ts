@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response  } from 'express';
+import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 import { batchService, BatchService } from './batch.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import { operationLogService } from '../../common/services/operation-log.service';
 
 export class BatchController {
   constructor(private readonly service: BatchService = batchService) {}
@@ -65,6 +67,18 @@ export class BatchController {
       images: body.images || [],
     });
 
+    operationLogService
+      .log({
+        userId: (req as AuthenticatedRequest).user?.userId,
+        farmId: req.body?.farmId,
+        batchId: Number((result as any)?.id ?? (result as any)?.batch_id ?? 0) || null,
+        action: 'CREATE_BATCH',
+        details: {
+          ma_lo: req.body?.name,
+          totalCrabs: req.body?.initialQuantity,
+        },
+      })
+      .catch(() => {});
     return ResponseUtil.success(res, result, MESSAGES.BATCH.CREATE_SUCCESS, 201);
   }
 
@@ -84,6 +98,14 @@ export class BatchController {
     const batchId = parseInt(req.params.id, 10);
     const { status } = req.body;
     const result = await this.service.updateBatchStatus(batchId, status);
+    operationLogService
+      .log({
+        userId: (req as AuthenticatedRequest).user?.userId,
+        batchId,
+        action: 'UPDATE_BATCH_STATUS',
+        details: { batch_id: batchId, status },
+      })
+      .catch(() => {});
     return ResponseUtil.success(res, result, MESSAGES.BATCH.UPDATE_SUCCESS);
   }
 }

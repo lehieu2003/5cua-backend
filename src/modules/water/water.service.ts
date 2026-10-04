@@ -14,8 +14,13 @@ export class WaterService {
       id: p.id,
       name: p.name,
       code: p.code,
+      unit: p.unit,
       ordinal: p.ordinal,
       show: p.isShow,
+      minNormal: p.minNormal,
+      maxNormal: p.maxNormal,
+      minCritical: p.minCritical,
+      maxCritical: p.maxCritical,
       water_parameter_value_ids: [
         {
           id: p.id,

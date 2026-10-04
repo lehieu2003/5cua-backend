@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/config/swagger.config';
 import { globalRateLimiter, authenticatedRateLimiter } from './common/middlewares/rate-limit.middleware';
+import { farmAccessGuard } from './common/guards/farm-access.guard';
 
 // Module Routers
 import authRoutes from './modules/auth/auth.routes';
@@ -55,9 +56,14 @@ app.use(
 app.use(globalRateLimiter);
 
 // ── Middlewares cơ bản ───────────────────────────────────────────
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(
+  cors({
+    origin: (origin, cb) => cb(null, !origin || env.corsAllowList.includes(origin)),
+    credentials: false,
+  })
+);
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(morgan(env.isDev ? 'dev' : 'combined'));
 
 // ── Health Check ─────────────────────────────────────────────────
@@ -70,8 +76,8 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// ── Swagger UI ────────────────────────────────────────────────────
-app.use(
+// ── Swagger UI (chỉ bật ngoài production — tránh rò rỉ sơ đồ API) ──
+if (!env.isProd) app.use(
   '/api-docs',
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
@@ -95,8 +101,8 @@ app.use(
   })
 );
 
-// Trả về raw JSON spec (để import vào Postman, Insomnia...)
-app.get('/api-docs.json', (_req: Request, res: Response) => {
+// Trả về raw JSON spec (để import vào Postman, Insomnia...) — chỉ ngoài production
+if (!env.isProd) app.get('/api-docs.json', (_req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
@@ -112,6 +118,11 @@ app.use('/api/v1', (req, res, next) => {
   }
   return authenticatedRateLimiter(req, res, next);
 });
+
+// Chặn đọc/ghi chéo trại (IDOR): user thường chỉ thao tác trại mình là thành viên.
+// /auth đã skip ở limiter phía trên; /users, /notifications và master-data
+// được farmAccessGuard tự exempt qua SKIP_PREFIXES.
+app.use('/api/v1', farmAccessGuard);
 
 app.use(farmRoutes);
 app.use(pondRoutes);

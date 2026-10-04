@@ -1,5 +1,6 @@
 import { farmRepository, FarmRepository } from './farm.repository';
 import { CreateFarmDto } from './farm.dto';
+import { AppError } from '../../common/errors/app.error';
 
 export class FarmService {
   constructor(private readonly repo: FarmRepository = farmRepository) {}
@@ -11,7 +12,7 @@ export class FarmService {
 
   async getFarmDetail(farmId: number) {
     const farm = await this.repo.findById(farmId);
-    if (!farm) throw new Error('Trang trại không tồn tại');
+    if (!farm) throw AppError.notFound('Trang trại không tồn tại');
     return farm;
   }
 

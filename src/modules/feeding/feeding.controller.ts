@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response  } from 'express';
+import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 import { feedingService, FeedingService } from './feeding.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import { operationLogService } from '../../common/services/operation-log.service';
 import jwt from 'jsonwebtoken';
 import { env } from '../../common/config/env';
 
@@ -19,7 +21,7 @@ export class FeedingController {
       const data = await this.service.getFeedingHistory(farmId, actionType);
       return ResponseUtil.success(res, { total: data.length, data });
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -66,9 +68,20 @@ export class FeedingController {
         ? MESSAGES.FEEDING.PROBIOTIC_SUCCESS
         : MESSAGES.FEEDING.CREATE_SUCCESS;
 
+      operationLogService
+        .log({
+          userId: (req as AuthenticatedRequest).user?.userId,
+          pondId: req.body?.pondId,
+          action: (req.body?.actionType || 'feeding').toUpperCase() === 'PROBIOTIC' ? 'PROBIOTIC' : 'FEEDING',
+          details: {
+            ma_ao: req.body?.pondId,
+            items: req.body?.items,
+          },
+        })
+        .catch(() => {});
       return ResponseUtil.success(res, result, message, 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -92,7 +105,7 @@ export class FeedingController {
       const products = await this.service.getFeedProducts(categoryType, isActiveFilter);
       return ResponseUtil.success(res, products);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -104,7 +117,7 @@ export class FeedingController {
       const categories = await this.service.getCategories();
       return ResponseUtil.success(res, categories);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -120,7 +133,7 @@ export class FeedingController {
       const cat = await this.service.createCategory({ code, name, type: type || 'type' });
       return ResponseUtil.success(res, cat, 'Tạo danh mục thành công', 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -133,7 +146,7 @@ export class FeedingController {
       const product = await this.service.getProduct(id);
       return ResponseUtil.success(res, product);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, 404);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -160,7 +173,7 @@ export class FeedingController {
 
       return ResponseUtil.success(res, product, 'Tạo sản phẩm/giống cua thành công', 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -195,7 +208,7 @@ export class FeedingController {
 
       return ResponseUtil.success(res, product, 'Cập nhật thành công');
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -208,7 +221,7 @@ export class FeedingController {
       await this.service.deleteProduct(id);
       return ResponseUtil.success(res, null, 'Xóa/Hủy kích hoạt sản phẩm thành công');
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -217,7 +230,7 @@ export class FeedingController {
       const statuses = await this.service.getFeedingStatuses();
       return ResponseUtil.success(res, statuses);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -226,7 +239,7 @@ export class FeedingController {
       const shapes = await this.service.getShapeStatuses();
       return ResponseUtil.success(res, shapes);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }

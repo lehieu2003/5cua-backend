@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response  } from 'express';
+import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 import { exportService, ExportService } from './export.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import { operationLogService } from '../../common/services/operation-log.service';
 
 export class ExportController {
   constructor(private readonly service: ExportService = exportService) {}
@@ -17,7 +19,7 @@ export class ExportController {
       const data = await this.service.getExportList(farmId, offset);
       return ResponseUtil.success(res, data);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -27,9 +29,21 @@ export class ExportController {
   async createExport(req: Request, res: Response) {
     try {
       const result = await this.service.createExport(req.body);
+      operationLogService
+        .log({
+          userId: (req as AuthenticatedRequest).user?.userId,
+          farmId: req.body?.farmId,
+          exportId: result?.export_id ?? null,
+          action: 'EXPORT_HARVEST',
+          details: {
+            ma_xuat: result?.code,
+            box_count: req.body?.boxes?.length,
+          },
+        })
+        .catch(() => {});
       return ResponseUtil.success(res, result, MESSAGES.EXPORT.CREATE_SUCCESS, 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -42,7 +56,7 @@ export class ExportController {
       const summary = await this.service.getSummary(farmId);
       return ResponseUtil.success(res, summary);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -55,7 +69,7 @@ export class ExportController {
       const detail = await this.service.getExportDetail(id);
       return ResponseUtil.success(res, detail);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -67,9 +81,17 @@ export class ExportController {
       const id = parseInt(req.params.id, 10);
       const { status } = req.body;
       const result = await this.service.updateExportStatus(id, status);
+      operationLogService
+        .log({
+          userId: (req as AuthenticatedRequest).user?.userId,
+          exportId: id,
+          action: 'UPDATE_EXPORT_STATUS',
+          details: { export_id: id, status },
+        })
+        .catch(() => {});
       return ResponseUtil.success(res, result);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }

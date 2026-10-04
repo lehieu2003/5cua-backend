@@ -1,6 +1,7 @@
 import { feedingRepository, FeedingRepository } from './feeding.repository';
 import { CreateFeedingDto } from './feeding.dto';
 import prisma from '../../database/prisma.service';
+import { AppError } from '../../common/errors/app.error';
 
 export class FeedingService {
   constructor(private readonly repo: FeedingRepository = feedingRepository) {}
@@ -174,7 +175,7 @@ export class FeedingService {
 
   async getProduct(id: number) {
     const p = await this.repo.findProductById(id);
-    if (!p) throw new Error('Sản phẩm không tồn tại');
+    if (!p) throw AppError.notFound('Sản phẩm không tồn tại');
     return {
       id: p.id,
       product_id: p.id,
@@ -204,7 +205,7 @@ export class FeedingService {
   }) {
     const existing = await this.repo.findProductByCode(data.code);
     if (existing) {
-      throw new Error(`Mã sản phẩm/giống '${data.code}' đã tồn tại.`);
+      throw AppError.conflict(`Mã sản phẩm/giống '${data.code}' đã tồn tại.`);
     }
     return this.repo.createProduct(data);
   }
@@ -224,7 +225,7 @@ export class FeedingService {
     if (data.code) {
       const existing = await this.repo.findProductByCode(data.code);
       if (existing && existing.id !== id) {
-        throw new Error(`Mã sản phẩm/giống '${data.code}' đã thuộc về một sản phẩm khác.`);
+        throw AppError.conflict(`Mã sản phẩm/giống '${data.code}' đã thuộc về một sản phẩm khác.`);
       }
     }
     return this.repo.updateProduct(id, data);

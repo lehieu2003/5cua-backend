@@ -22,7 +22,9 @@ export const env = {
   PORT:     optionalEnv('PORT', '5000'),
   NODE_ENV: optionalEnv('NODE_ENV', 'development'),
   APP_URL:  optionalEnv('APP_URL', ''),   // Dùng trong Swagger server URL
-  TRUST_PROXY: optionalEnv('TRUST_PROXY', '1'),
+  // Mặc định 'false': KHÔNG tin X-Forwarded-For khi chạy trực tiếp (chống spoof IP
+  // để né rate limiter). Chỉ đặt TRUST_PROXY=1 khi deploy sau reverse proxy (nginx...).
+  TRUST_PROXY: optionalEnv('TRUST_PROXY', 'false'),
 
   // ── Database ────────────────────────────────────────────────────
   DATABASE_URL: requireEnv('DATABASE_URL'),
@@ -38,12 +40,18 @@ export const env = {
   SEED_FARM_CODE:      optionalEnv('SEED_FARM_CODE', 'FARM-DEFAULT-01'),
   SEED_FARM_NAME:      optionalEnv('SEED_FARM_NAME', '5Cua Smart Farm'),
 
+  // ── CORS (tuỳ chọn) ─────────────────────────────────────────────
+  // Danh sách origin được phép, phân cách bởi dấu phẩy. Rỗng = chỉ cho
+  // request không có origin (curl/mobile). Dev mặc định cho localhost:3000.
+  CORS_ORIGINS: optionalEnv('CORS_ORIGINS', 'http://localhost:3000'),
+
   // ── Redis (tuỳ chọn) ────────────────────────────────────────────
   REDIS_URL: optionalEnv('REDIS_URL', ''),
 
   // ── Helpers ─────────────────────────────────────────────────────
   get isDev()  { return this.NODE_ENV === 'development'; },
   get isProd() { return this.NODE_ENV === 'production'; },
+  get corsAllowList() { return this.CORS_ORIGINS.split(',').map((o: string) => o.trim()).filter(Boolean); },
 
   /**
    * Trả về base URL của server để dùng trong Swagger, email, webhook...

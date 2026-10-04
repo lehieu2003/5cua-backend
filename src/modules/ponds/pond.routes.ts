@@ -42,7 +42,7 @@ const router = Router();
  *       201:
  *         description: Tạo ao và sinh hộp thành công
  */
-router.get('/api/v1/ponds', asyncHandler((req, res) => pondController.listPonds(req, res)));
+router.get('/api/v1/ponds', authGuard, asyncHandler((req, res) => pondController.listPonds(req, res)));
 router.post('/api/v1/ponds', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), validate(CreatePondSchema), asyncHandler((req, res) => pondController.createPond(req, res)));
 
 /**
@@ -61,8 +61,8 @@ router.post('/api/v1/ponds', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', '
  *       200:
  *         description: Thông tin chi tiết ao
  */
-router.get('/api/v1/ponds/:id', asyncHandler((req, res) => pondController.getPond(req, res)));
-router.put('/api/v1/ponds/:id', asyncHandler((req, res) => pondController.updatePond(req, res)));
+router.get('/api/v1/ponds/:id', authGuard, asyncHandler((req, res) => pondController.getPond(req, res)));
+router.put('/api/v1/ponds/:id', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER', 'TECHNICIAN'), asyncHandler((req, res) => pondController.updatePond(req, res)));
 
 /**
  * @openapi
@@ -97,6 +97,6 @@ router.put('/api/v1/ponds/:id', asyncHandler((req, res) => pondController.update
  *       200:
  *         description: Ma trận hộp theo block/row/column
  */
-router.get('/api/v1/ponds/:id/boxes', asyncHandler((req, res) => pondController.listBoxes(req, res)));
+router.get('/api/v1/ponds/:id/boxes', authGuard, asyncHandler((req, res) => pondController.listBoxes(req, res)));
 
 export default router;

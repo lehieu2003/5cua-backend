@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response  } from 'express';
+import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 import { waterService, WaterService } from './water.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import { operationLogService } from '../../common/services/operation-log.service';
 
 export class WaterController {
   constructor(private readonly service: WaterService = waterService) {}
@@ -14,7 +16,7 @@ export class WaterController {
       const data = await this.service.getWaterParameters();
       return ResponseUtil.success(res, data);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -24,9 +26,20 @@ export class WaterController {
   async addCheck(req: Request, res: Response) {
     try {
       const result = await this.service.addWaterCheck(req.body);
+      operationLogService
+        .log({
+          userId: (req as AuthenticatedRequest).user?.userId,
+          pondId: Number(req.body?.warehouseId ?? req.body?.pondId) || null,
+          action: 'WATER_CHECK',
+          details: {
+            has_warning: result?.has_warning,
+            warnings_created: result?.warnings_created,
+          },
+        })
+        .catch(() => {});
       return ResponseUtil.success(res, result, MESSAGES.WATER.ADD_CHECK_SUCCESS, 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -45,7 +58,7 @@ export class WaterController {
       const data = await this.service.getWaterHistory(pondId, offset);
       return ResponseUtil.success(res, data);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -60,9 +73,9 @@ export class WaterController {
       }
       const farmId = parseInt(rawFarmId as string, 10);
       const count = await this.service.getWarningCount(farmId);
-      return ResponseUtil.success(res, { count });
+      return ResponseUtil.success(res, { count, unresolvedCount: count });
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }

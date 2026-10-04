@@ -1,4 +1,5 @@
 import prisma from '../../database/prisma.service';
+import { AppError } from '../../common/errors/app.error';
 import { exportRepository, ExportRepository } from './export.repository';
 import { CreateExportDto } from './export.dto';
 
@@ -15,6 +16,8 @@ export class ExportService {
       export_date: e.exportDate.toISOString(),
       partner_name: e.partnerName || '',
       total_quantity: e.totalQty,
+      total_crabs: e.totalQty,
+      totalCrabs: e.totalQty,
       total_weight: e.totalWeight,
       total_amount: e.totalAmount,
       status: e.status.toLowerCase(),
@@ -41,7 +44,7 @@ export class ExportService {
 
   async getExportDetail(id: number) {
     const exp = await this.repo.findById(id);
-    if (!exp) throw new Error('Không tìm thấy phiếu xuất bán');
+    if (!exp) throw AppError.notFound('Không tìm thấy phiếu xuất bán');
 
     // Look up product if any box has productId
     let crabTypeName = 'Cua thương phẩm (Loại 1)';

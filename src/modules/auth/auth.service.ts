@@ -74,6 +74,7 @@ export class AuthService {
         role,
         memberType: memberTypeFormatted,
         familyId,
+        jti: crypto.randomUUID(),
       },
       env.JWT_REFRESH_SECRET,
       { expiresIn: env.JWT_REFRESH_EXPIRES as any }
@@ -108,7 +109,7 @@ export class AuthService {
     };
   }
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto, actor?: { role?: string; memberType?: string }) {
     // 1. Kiểm tra username
     const existingUser = await this.repo.findByUsername(dto.username.trim());
     if (existingUser) {
@@ -134,15 +135,32 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
+
+    // Chống privilege escalation qua API công khai:
+    // - Ẩn danh: luôn WORKER/standard, KHÔNG tự gán vào farm nào.
+    // - Admin đăng nhập: được chỉ định role/farmId, nhưng chỉ SUPER_ADMIN
+    //   mới được tạo user có quyền SUPER_ADMIN hoặc memberType admin.
+    // Chỉ actor quản trị mới được chỉ định role/memberType/farmId khi tạo user.
+    // Chỉ SUPER_ADMIN mới được tạo user quyền SUPER_ADMIN / memberType admin.
+    const privileged = !!actor;
+    const canAssignSuper = privileged && actor!.role === 'SUPER_ADMIN';
+    const safeMemberType = privileged ? dto.memberType : 'standard';
+    const safeRole = privileged ? (dto.role as UserRole) : UserRole.WORKER;
+    const finalRole =
+      ['SUPER_ADMIN'].includes(String(safeRole)) && !canAssignSuper ? UserRole.MANAGER : safeRole || UserRole.WORKER;
+    const finalMemberType =
+      String(safeMemberType).toUpperCase() === 'ADMIN' && !canAssignSuper ? 'STANDARD' : safeMemberType;
+    const safeFarmId = privileged ? dto.farmId : undefined;
+
     const newUser = await this.repo.createUser({
       username: dto.username,
       passwordHash,
       fullName: dto.fullName,
       email: email || null,
       phone: phone || null,
-      memberType: dto.memberType,
-      role: dto.role as UserRole,
-      farmId: dto.farmId,
+      memberType: finalMemberType,
+      role: finalRole,
+      farmId: safeFarmId,
     });
 
     return {
@@ -153,7 +171,7 @@ export class AuthService {
       phone: newUser.phone,
       memberType: (newUser.memberType || 'standard').toLowerCase(),
       member_type: (newUser.memberType || 'standard').toLowerCase(),
-      role: dto.role || 'WORKER',
+      role: finalRole || 'WORKER',
     };
   }
 
@@ -316,6 +334,7 @@ export class AuthService {
               role,
               memberType: memberTypeFormatted,
               familyId: tokenRecord.familyId,
+              jti: crypto.randomUUID(),
             },
             env.JWT_REFRESH_SECRET,
             { expiresIn: env.JWT_REFRESH_EXPIRES as any }
@@ -384,6 +403,7 @@ export class AuthService {
         role,
         memberType: memberTypeFormatted,
         familyId: tokenRecord.familyId,
+        jti: crypto.randomUUID(),
       },
       env.JWT_REFRESH_SECRET,
       { expiresIn: env.JWT_REFRESH_EXPIRES as any }

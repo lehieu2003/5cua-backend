@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
+import { authGuard } from '../../common/guards/auth.guard';
 import { moveController } from './move.controller';
 
 const router = Router();
@@ -31,8 +32,8 @@ const router = Router();
  *       400:
  *         description: Hộp nguồn trống hoặc hộp đích đã có cua
  */
-router.get('/api/v1/moves', asyncHandler((req, res) => moveController.listMoves(req, res)));
-router.post('/api/v1/moves', asyncHandler((req, res) => moveController.moveBox(req, res)));
+router.get('/api/v1/moves', authGuard, asyncHandler((req, res) => moveController.listMoves(req, res)));
+router.post('/api/v1/moves', authGuard, asyncHandler((req, res) => moveController.moveBox(req, res)));
 
 /**
  * @openapi
@@ -44,8 +45,8 @@ router.post('/api/v1/moves', asyncHandler((req, res) => moveController.moveBox(r
  *       200:
  *         description: Thống kê tổng
  */
-router.get('/api/v1/moves/summary', asyncHandler((req, res) => moveController.getSummary(req, res)));
-router.get('/api/v1/moves/:id', asyncHandler((req, res) => moveController.getMoveDetail(req, res)));
-router.patch('/api/v1/moves/:id/status', asyncHandler((req, res) => moveController.updateStatus(req, res)));
+router.get('/api/v1/moves/summary', authGuard, asyncHandler((req, res) => moveController.getSummary(req, res)));
+router.get('/api/v1/moves/:id', authGuard, asyncHandler((req, res) => moveController.getMoveDetail(req, res)));
+router.patch('/api/v1/moves/:id/status', authGuard, asyncHandler((req, res) => moveController.updateStatus(req, res)));
 
 export default router;

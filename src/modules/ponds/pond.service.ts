@@ -1,5 +1,6 @@
 import { pondRepository, PondRepository } from './pond.repository';
 import { CreatePondDto, FilterBoxDto } from './pond.dto';
+import { AppError } from '../../common/errors/app.error';
 
 export class PondService {
   constructor(private readonly repo: PondRepository = pondRepository) {}
@@ -68,7 +69,7 @@ export class PondService {
 
   async getPondDetail(pondId: number) {
     const pond = await this.repo.findById(pondId);
-    if (!pond) throw new Error('Không tìm thấy thông tin ao nuôi');
+    if (!pond) throw AppError.notFound('Không tìm thấy thông tin ao nuôi');
 
     let occupiedCount = 0;
     const productQuantMap = new Map<
@@ -126,20 +127,33 @@ export class PondService {
 
   async filterBoxes(dto: FilterBoxDto) {
     const boxes = await this.repo.filterBoxes(dto);
-    return boxes.map((box) => ({
-      id: box.id,
-      code: box.code,
-      name: box.code,
-      block_id: box.blockId,
-      posz: box.block.posZ,
-      row: box.row,
-      column: box.column,
-      status: box.status.toLowerCase(),
-      product_id: box.productId,
-      product_name: box.product?.name || '',
-      feed_id: box.feedStatusId,
-      shape_id: box.shapeStatusId,
-    }));
+    return boxes.map((box) => {
+      // 1 hộp = 1 con cua: trọng lượng ước tính từ khối lượng trung bình của đợt nhập
+      const avgWeight =
+        box.batch && box.batch.initialQuantity > 0
+          ? Number((box.batch.initialWeight / box.batch.initialQuantity).toFixed(2))
+          : null;
+      return {
+        id: box.id,
+        code: box.code,
+        name: box.code,
+        block_id: box.blockId,
+        posz: box.block.posZ,
+        row: box.row,
+        column: box.column,
+        status: box.status.toLowerCase(),
+        product_id: box.productId,
+        product_name: box.product?.name || '',
+        feed_id: box.feedStatusId,
+        shape_id: box.shapeStatusId,
+        batch_id: box.batchId,
+        batch_code: box.batch?.code || null,
+        occupied_at: box.occupiedAt ? box.occupiedAt.toISOString() : null,
+        crab_code: box.status === 'OCCUPIED' ? `CUA-${box.id}` : null,
+        crab_type: box.product?.name || null,
+        current_weight: box.status === 'OCCUPIED' ? avgWeight : null,
+      };
+    });
   }
 
   async updatePond(pondId: number, data: any) {

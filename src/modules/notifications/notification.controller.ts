@@ -16,7 +16,7 @@ export class NotificationController {
       const data = await this.service.getNotificationList(user?.userId, isRead);
       return ResponseUtil.success(res, data);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -29,7 +29,7 @@ export class NotificationController {
       const data = await this.service.getDetail(notificationId);
       return ResponseUtil.success(res, data);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -42,7 +42,7 @@ export class NotificationController {
       await this.service.markAllRead(user?.userId);
       return ResponseUtil.success(res, null, MESSAGES.NOTIFICATION.MARK_ALL_READ_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -55,7 +55,7 @@ export class NotificationController {
       await this.service.removeNotification(notificationId);
       return ResponseUtil.success(res, null, MESSAGES.NOTIFICATION.DELETE_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
   /**
@@ -71,7 +71,7 @@ export class NotificationController {
       const data = await this.service.registerDeviceToken(user.userId, fcmToken, platform);
       return ResponseUtil.success(res, data, 'Đăng ký device token thành công');
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -87,7 +87,7 @@ export class NotificationController {
       await this.service.unregisterDeviceToken(fcmToken);
       return ResponseUtil.success(res, null, 'Hủy đăng ký device token thành công');
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }

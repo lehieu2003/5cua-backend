@@ -1,5 +1,6 @@
 import { moveRepository, MoveRepository } from './move.repository';
 import { MoveBoxDto } from './move.dto';
+import { AppError } from '../../common/errors/app.error';
 
 export class MoveService {
   constructor(private readonly repo: MoveRepository = moveRepository) {}
@@ -43,7 +44,7 @@ export class MoveService {
 
   async getMoveDetail(id: number) {
     const m = await this.repo.findById(id);
-    if (!m) throw new Error('Không tìm thấy bản ghi chuyển hộp');
+    if (!m) throw AppError.notFound('Không tìm thấy bản ghi chuyển hộp');
     return {
       id: m.id,
       code: `MOVE-${m.id}`,

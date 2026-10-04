@@ -18,7 +18,7 @@ export class AuthController {
       const result = await this.service.login(req.body);
       return ResponseUtil.success(res, result, MESSAGES.AUTH.LOGIN_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -27,10 +27,20 @@ export class AuthController {
    */
   async register(req: Request, res: Response) {
     try {
-      const result = await this.service.register(req.body);
+      // Chỉ actor đã đăng nhập với quyền quản trị mới được chỉ định role/memberType/farmId
+      // khi tạo user. Khách ẩn danh luôn bị ép mặc định an toàn (WORKER/standard, không gán farm).
+      const actor = (req as AuthenticatedRequest).user;
+      const privilegedRoles = ['SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'];
+      const privileged =
+        !!actor &&
+        (privilegedRoles.includes(String(actor.role)) || String(actor.memberType).toLowerCase() === 'admin');
+      const result = await this.service.register(
+        req.body,
+        privileged ? { role: String(actor!.role), memberType: String(actor!.memberType) } : undefined,
+      );
       return ResponseUtil.success(res, result, MESSAGES.AUTH.REGISTER_SUCCESS, 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -42,7 +52,7 @@ export class AuthController {
       const result = await this.service.refreshToken(req.body);
       return ResponseUtil.success(res, result, 'Làm mới token thành công');
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 401);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -54,7 +64,7 @@ export class AuthController {
       await this.service.logout(req.body);
       return ResponseUtil.success(res, null, MESSAGES.AUTH.LOGOUT_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -69,7 +79,7 @@ export class AuthController {
       const profile = await this.service.getProfile(userId);
       return ResponseUtil.success(res, profile);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -84,7 +94,7 @@ export class AuthController {
       const updated = await this.service.updateProfile(userId, req.body);
       return ResponseUtil.success(res, updated, MESSAGES.AUTH.UPDATE_PROFILE_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -99,7 +109,7 @@ export class AuthController {
       await this.service.changePassword(userId, req.body);
       return ResponseUtil.success(res, null, MESSAGES.AUTH.CHANGE_PASSWORD_SUCCESS);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -112,7 +122,7 @@ export class AuthController {
       const users = await this.service.listUsers(farmId);
       return ResponseUtil.success(res, users);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -135,7 +145,7 @@ export class AuthController {
       const msg = isActive ? 'Mở khóa tài khoản thành công' : 'Khóa tài khoản thành công';
       return ResponseUtil.success(res, result, msg);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message, error.statusCode || 400);
+      return ResponseUtil.fromError(res, error);
     }
   }
 

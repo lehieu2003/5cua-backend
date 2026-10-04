@@ -75,6 +75,20 @@ export const globalErrorHandler = (
     return;
   }
 
+  // Lỗi có statusCode chuẩn hoá từ middleware (VD: 413 PayloadTooLarge của body-parser)
+  const stdStatus = (err as any).statusCode;
+  if (typeof stdStatus === 'number' && stdStatus >= 400 && stdStatus < 600) {
+    const friendly =
+      stdStatus === 413 ? 'Dữ liệu gửi lên quá lớn (giới hạn 5MB)' : MESSAGES.SYSTEM.INTERNAL_ERROR;
+    res.status(stdStatus).json({
+      success: false,
+      status: 'error',
+      code: stdStatus,
+      message: env.isDev ? err.message : friendly,
+    });
+    return;
+  }
+
   // Unknown / Programmer error
   res.status(500).json({
     success: false,

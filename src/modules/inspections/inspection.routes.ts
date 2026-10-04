@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
+import { authGuard } from '../../common/guards/auth.guard';
 import { inspectionController } from './inspection.controller';
 
 const router = Router();
@@ -37,7 +38,7 @@ const router = Router();
  *       201:
  *         description: Ghi nhận thành công
  */
-router.post('/api/v1/inspections/cleaning', asyncHandler((req, res) => inspectionController.addCleanCheck(req, res)));
+router.post('/api/v1/inspections/cleaning', authGuard, asyncHandler((req, res) => inspectionController.addCleanCheck(req, res)));
 
 /**
  * @openapi
@@ -66,6 +67,6 @@ router.post('/api/v1/inspections/cleaning', asyncHandler((req, res) => inspectio
  *       200:
  *         description: Chuyển đổi thành công
  */
-router.post('/api/v1/inspections/convert-crab', asyncHandler((req, res) => inspectionController.convertCrab(req, res)));
+router.post('/api/v1/inspections/convert-crab', authGuard, asyncHandler((req, res) => inspectionController.convertCrab(req, res)));
 
 export default router;

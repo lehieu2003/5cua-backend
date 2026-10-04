@@ -17,7 +17,7 @@ export class PondController {
       const ponds = await this.service.getPondsByFarm(farmId, keyword);
       return ResponseUtil.success(res, ponds);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -30,7 +30,7 @@ export class PondController {
       const pond = await this.service.getPondDetail(pondId);
       return ResponseUtil.success(res, pond);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -55,7 +55,7 @@ export class PondController {
 
       return ResponseUtil.success(res, boxes);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -67,7 +67,7 @@ export class PondController {
       const pond = await this.service.createPond(req.body);
       return ResponseUtil.success(res, pond, MESSAGES.POND.CREATE_SUCCESS, 201);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -80,7 +80,7 @@ export class PondController {
       const result = await this.service.updatePond(pondId, req.body);
       return ResponseUtil.success(res, result);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }

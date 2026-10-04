@@ -63,8 +63,8 @@ router.patch('/api/v1/notifications/read-all', authGuard, asyncHandler((req, res
  */
 import { authGuard } from '../../common/guards/auth.guard';
 
-router.get('/api/v1/notifications/:id', asyncHandler((req, res) => notificationController.getNotificationDetail(req, res)));
-router.delete('/api/v1/notifications/:id', asyncHandler((req, res) => notificationController.removeNotification(req, res)));
+router.get('/api/v1/notifications/:id', authGuard, asyncHandler((req, res) => notificationController.getNotificationDetail(req, res)));
+router.delete('/api/v1/notifications/:id', authGuard, asyncHandler((req, res) => notificationController.removeNotification(req, res)));
 
 /**
  * @openapi
@@ -79,6 +79,6 @@ router.delete('/api/v1/notifications/:id', asyncHandler((req, res) => notificati
  *     summary: Xóa FCM Device Token khi đăng xuất
  */
 router.post('/api/v1/notifications/device-token', authGuard, asyncHandler((req, res) => notificationController.registerDeviceToken(req, res)));
-router.delete('/api/v1/notifications/device-token', asyncHandler((req, res) => notificationController.unregisterDeviceToken(req, res)));
+router.delete('/api/v1/notifications/device-token', authGuard, asyncHandler((req, res) => notificationController.unregisterDeviceToken(req, res)));
 
 export default router;

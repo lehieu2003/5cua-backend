@@ -55,7 +55,7 @@ const router = Router();
  *       201:
  *         description: Xuất bán thành công
  */
-router.get('/api/v1/exports', asyncHandler((req, res) => exportController.listExports(req, res)));
+router.get('/api/v1/exports', authGuard, asyncHandler((req, res) => exportController.listExports(req, res)));
 router.post('/api/v1/exports', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => exportController.createExport(req, res)));
 
 /**
@@ -68,8 +68,8 @@ router.post('/api/v1/exports', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER',
  *       200:
  *         description: Thống kê tổng xuất
  */
-router.get('/api/v1/exports/summary', asyncHandler((req, res) => exportController.getSummary(req, res)));
-router.get('/api/v1/exports/:id', asyncHandler((req, res) => exportController.getDetail(req, res)));
-router.patch('/api/v1/exports/:id/status', asyncHandler((req, res) => exportController.updateStatus(req, res)));
+router.get('/api/v1/exports/summary', authGuard, asyncHandler((req, res) => exportController.getSummary(req, res)));
+router.get('/api/v1/exports/:id', authGuard, asyncHandler((req, res) => exportController.getDetail(req, res)));
+router.patch('/api/v1/exports/:id/status', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => exportController.updateStatus(req, res)));
 
 export default router;

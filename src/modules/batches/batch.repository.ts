@@ -1,3 +1,4 @@
+import { AppError } from '../../common/errors/app.error';
 import prisma from '../../database/prisma.service';
 import { BatchStatus, BoxStatus } from '@prisma/client';
 
@@ -218,6 +219,18 @@ export class BatchRepository {
       dbStatus = BatchStatus.DRAFT;
     } else if (s === 'CANCELLED' || s === 'CANCELED' || s === 'ĐÃ HỦY' || s === 'DA HUY') {
       dbStatus = BatchStatus.CANCELLED;
+    }
+
+    const KNOWN_BATCH_STATUSES = new Set([
+      'DRAFT', 'NEW', 'MỚI', 'MOI',
+      'ACTIVE', 'IN_PROGRESS', 'PROCESSING', 'ĐANG NUÔI', 'DANG NUOI',
+      'COMPLETED', 'DONE', 'CLOSED', 'FINISHED', 'THU HOẠCH', 'THU HOACH',
+      'CANCELLED', 'CANCELED', 'ĐÃ HỦY', 'DA HUY',
+    ]);
+    if (s && !KNOWN_BATCH_STATUSES.has(s)) {
+      throw AppError.badRequest(
+        `Trạng thái đợt nhập không hợp lệ: "${status}". Cho phép: DRAFT, IN_PROGRESS, COMPLETED, CANCELLED`
+      );
     }
 
     return prisma.stockImportBatch.update({

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
 import { validate } from '../../common/middlewares/validate.middleware';
-import { authGuard } from '../../common/guards/auth.guard';
+import { authGuard, optionalAuth } from '../../common/guards/auth.guard';
 import { roleGuard } from '../../common/guards/role.guard';
-import { authRateLimiter } from '../../common/middlewares/rate-limit.middleware';
+import { authRateLimiter, refreshRateLimiter } from '../../common/middlewares/rate-limit.middleware';
 import { authController } from './auth.controller';
 import { LoginSchema, RegisterSchema, ChangePasswordSchema, UpdateProfileSchema, RefreshTokenSchema, LogoutSchema } from './auth.dto';
 
@@ -57,7 +57,7 @@ router.post('/api/v1/auth/login', authRateLimiter, validate(LoginSchema), asyncH
  *       429:
  *         description: Thử đăng ký quá nhiều lần
  */
-router.post('/api/v1/auth/register', authRateLimiter, validate(RegisterSchema), asyncHandler((req, res) => authController.register(req, res)));
+router.post('/api/v1/auth/register', authRateLimiter, optionalAuth, validate(RegisterSchema), asyncHandler((req, res) => authController.register(req, res)));
 
 /**
  * @openapi
@@ -88,7 +88,7 @@ router.post('/api/v1/auth/register', authRateLimiter, validate(RegisterSchema), 
  */
 router.post(
   '/api/v1/auth/refresh',
-  authRateLimiter,
+  refreshRateLimiter,
   validate(RefreshTokenSchema),
   asyncHandler((req, res) => authController.refreshToken(req, res))
 );
@@ -184,7 +184,7 @@ router.put('/api/v1/users/me', authGuard, validate(UpdateProfileSchema), asyncHa
  *       200:
  *         description: Danh sách users
  */
-router.get('/api/v1/users', authGuard, asyncHandler((req, res) => authController.listUsers(req, res)));
+router.get('/api/v1/users', authGuard, roleGuard('SUPER_ADMIN', 'FARM_OWNER', 'MANAGER'), asyncHandler((req, res) => authController.listUsers(req, res)));
 
 /**
  * @openapi

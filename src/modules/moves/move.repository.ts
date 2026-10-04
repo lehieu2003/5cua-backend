@@ -1,3 +1,4 @@
+import { AppError } from '../../common/errors/app.error';
 import prisma from '../../database/prisma.service';
 import { BoxStatus, MoveStatus } from '@prisma/client';
 
@@ -7,13 +8,13 @@ export class MoveRepository {
       // 1. Kiểm tra hộp nguồn phải OCCUPIED
       const srcBox = await tx.box.findUnique({ where: { id: data.sourceBoxId } });
       if (!srcBox || srcBox.status !== BoxStatus.OCCUPIED) {
-        throw new Error('Hộp nguồn không có cua đang nuôi để chuyển');
+        throw AppError.badRequest('Hộp nguồn không có cua đang nuôi để chuyển');
       }
 
       // 2. Kiểm tra hộp đích phải EMPTY
       const destBox = await tx.box.findUnique({ where: { id: data.destBoxId } });
       if (!destBox || destBox.status !== BoxStatus.EMPTY) {
-        throw new Error('Hộp đích đã có cua hoặc không ở trạng thái trống');
+        throw AppError.badRequest('Hộp đích đã có cua hoặc không ở trạng thái trống');
       }
 
       // 3. Cập nhật hộp đích nhận thông tin cua
@@ -111,9 +112,16 @@ export class MoveRepository {
   }
 
   async updateStatus(id: number, status: MoveStatus) {
+    const allowed: string[] = Object.values(MoveStatus);
+    const s = (status || '').toString().toUpperCase().trim();
+    if (!allowed.includes(s)) {
+      throw AppError.badRequest(
+        `Trạng thái chuyển hộp không hợp lệ: "${status}". Cho phép: ${allowed.join(', ')}`
+      );
+    }
     return prisma.stockPickingMove.update({
       where: { id },
-      data: { status },
+      data: { status: s as MoveStatus },
     });
   }
 }

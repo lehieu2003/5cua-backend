@@ -63,10 +63,36 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (user && user.userId) {
+      return `auth_user_${user.userId}`;
+    }
     const rawUsername = req.body && typeof req.body.username === 'string' ? req.body.username : '';
     const username = rawUsername.trim().toLowerCase();
     const clientIp = ipKeyGenerator(req.ip || '');
     return username ? `auth_${clientIp}_${username}` : `auth_${clientIp}`;
+  },
+  message: {
+    status: 'error',
+    code: 429,
+    message: MESSAGES.AUTH.AUTH_RATE_LIMIT_EXCEEDED,
+  },
+});
+
+/**
+ * Refresh Token Rate Limiter:
+ * /auth/refresh là thao tác nền định kỳ của MỌI thiết bị (access token 1h) và body
+ * không có username — nếu dùng chung authRateLimiter theo IP thì các thiết bị sau
+ * NAT sẽ chen nhau cạn 15 req/15 phút. Limiter riêng khoan dung hơn: 60 req/15 phút/IP.
+ */
+export const refreshRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const clientIp = ipKeyGenerator(req.ip || '');
+    return `refresh_${clientIp}`;
   },
   message: {
     status: 'error',

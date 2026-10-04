@@ -64,3 +64,39 @@ export const authGuard = async (
     next(err);
   }
 };
+
+/**
+ * optionalAuth: xác thực MỀM — nếu có Bearer token hợp lệ thì gắn req.user,
+ * không có / sai / hết hạn thì vẫn cho qua như khách ẩn danh (không bao giờ 401).
+ * Dùng cho endpoint công khai có hành vi khác nhau theo danh tính (VD: /auth/register
+ * — admin tạo user với role chỉ định, khách ẩn danh bị ép mặc định an toàn).
+ */
+export const optionalAuth = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.split(' ')[1], env.JWT_ACCESS_SECRET) as any;
+      if (decoded && decoded.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+          select: { id: true, username: true, isActive: true },
+        });
+        if (user && user.isActive) {
+          req.user = {
+            userId: user.id,
+            username: user.username,
+            role: decoded.role,
+            memberType: decoded.memberType,
+          };
+        }
+      }
+    } catch {
+      // token rác — coi như ẩn danh
+    }
+  }
+  next();
+};

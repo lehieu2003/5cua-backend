@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../common/utils/async.handler';
+import { authGuard } from '../../common/guards/auth.guard';
 import { waterController } from './water.controller';
 
 const router = Router();
@@ -15,7 +16,7 @@ const router = Router();
  *       200:
  *         description: Danh sách WaterParameter
  */
-router.get('/api/v1/water/parameters', asyncHandler((req, res) => waterController.listParameters(req, res)));
+router.get('/api/v1/water/parameters', authGuard, asyncHandler((req, res) => waterController.listParameters(req, res)));
 
 /**
  * @openapi
@@ -53,8 +54,8 @@ router.get('/api/v1/water/parameters', asyncHandler((req, res) => waterControlle
  *       201:
  *         description: Ghi nhận thành công, trả về has_warning
  */
-router.get('/api/v1/water/checks', asyncHandler((req, res) => waterController.listHistory(req, res)));
-router.post('/api/v1/water/checks', asyncHandler((req, res) => waterController.addCheck(req, res)));
+router.get('/api/v1/water/checks', authGuard, asyncHandler((req, res) => waterController.listHistory(req, res)));
+router.post('/api/v1/water/checks', authGuard, asyncHandler((req, res) => waterController.addCheck(req, res)));
 
 /**
  * @openapi
@@ -72,7 +73,7 @@ router.post('/api/v1/water/checks', asyncHandler((req, res) => waterController.a
  *       200:
  *         description: Số lượng cảnh báo
  */
-router.get('/api/v1/water/warnings/count', asyncHandler((req, res) => waterController.getWarningCount(req, res)));
-router.get('/api/v1/water/warning-count', asyncHandler((req, res) => waterController.getWarningCount(req, res)));
+router.get('/api/v1/water/warnings/count', authGuard, asyncHandler((req, res) => waterController.getWarningCount(req, res)));
+router.get('/api/v1/water/warning-count', authGuard, asyncHandler((req, res) => waterController.getWarningCount(req, res)));
 
 export default router;

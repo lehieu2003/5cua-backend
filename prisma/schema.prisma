@@ -385,8 +385,8 @@ model StockPickingMove {
   reason      String?
   movedAt     DateTime   @default(now()) @map("moved_at")
 
-  sourceBox   Box        @relation("SourceBoxMoves", fields: [sourceBoxId], references: [id])
-  destBox     Box        @relation("DestBoxMoves", fields: [destBoxId], references: [id])
+  sourceBox   Box        @relation("SourceBoxMoves", fields: [sourceBoxId], references: [id], onDelete: Cascade)
+  destBox     Box        @relation("DestBoxMoves", fields: [destBoxId], references: [id], onDelete: Cascade)
 
   @@map("stock_picking_moves")
 }

@@ -1,12 +1,13 @@
 import { notificationRepository, NotificationRepository } from './notification.repository';
 import { getFirebaseMessaging } from '../../common/config/firebase.config';
 import prisma from '../../database/prisma.service';
+import { AppError } from '../../common/errors/app.error';
 
 export class NotificationService {
   constructor(private readonly repo: NotificationRepository = notificationRepository) {}
 
   async registerDeviceToken(userId: number, fcmToken: string, platform?: string) {
-    if (!fcmToken) throw new Error('fcmToken không được để trống');
+    if (!fcmToken) throw AppError.badRequest('fcmToken không được để trống');
     return this.repo.saveDeviceToken(userId, fcmToken, platform);
   }
 
@@ -101,7 +102,7 @@ export class NotificationService {
 
   async getDetail(id: number) {
     const item = await this.repo.findById(id);
-    if (!item) throw new Error('Không tìm thấy thông báo');
+    if (!item) throw AppError.notFound('Không tìm thấy thông báo');
 
     return {
       id: item.id,

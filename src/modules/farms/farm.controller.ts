@@ -17,7 +17,7 @@ export class FarmController {
       const farms = await this.service.getAllFarms(userId, role, memberType);
       return ResponseUtil.success(res, farms);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -30,7 +30,7 @@ export class FarmController {
       const overview = await this.service.getFarmOverview(farmId);
       return ResponseUtil.success(res, overview);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -45,7 +45,7 @@ export class FarmController {
       );
       return ResponseUtil.success(res, warnings);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -60,7 +60,7 @@ export class FarmController {
       );
       return ResponseUtil.success(res, operations);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 
@@ -75,7 +75,7 @@ export class FarmController {
       );
       return ResponseUtil.success(res, tasks);
     } catch (error: any) {
-      return ResponseUtil.error(res, error.message);
+      return ResponseUtil.fromError(res, error);
     }
   }
 }
