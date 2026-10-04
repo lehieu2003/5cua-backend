@@ -405,6 +405,40 @@ async function run() {
     );
   }
 
+  // ── MOB-FEEDING: body camelCase mà Flutter mới gửi (CreateFeedingSchema) ──
+  {
+    const f = await setupTestFarm();
+    try {
+      const feedingRes = await api('POST', '/api/v1/feeding', {
+        token: adminToken,
+        body: {
+          actionType: 'feeding',
+          pondId: f.pondId,
+          srcId: 1,
+          items: [{ productId: f.productId, qty: 0.5 }],
+          farmId: f.farmId,
+        },
+      });
+      record(
+        '[FEEDING] POST /feeding body camelCase + farmId → 201',
+        feedingRes.status === 201 || feedingRes.status === 200,
+        `status=${feedingRes.status}, body=${JSON.stringify(feedingRes.body).slice(0, 140)}`
+      );
+      // body kiểu cũ snake_case của mobile phải bị từ chối rõ ràng (422), không 500
+      const legacy = await api('POST', '/api/v1/feeding', {
+        token: adminToken,
+        body: { action_type: 'feeding', pond_id: f.pondId, items: [{ product_id: f.productId, qty: 1 }] },
+      });
+      record(
+        '[FEEDING] body snake_case cũ → 422 (không 500)',
+        legacy.status === 422,
+        `status=${legacy.status}, body=${JSON.stringify(legacy.body).slice(0, 120)}`
+      );
+    } finally {
+      await teardownTestFarm();
+    }
+  }
+
   printSummary(SUITE);
 }
 
