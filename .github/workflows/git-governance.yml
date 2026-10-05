@@ -1,0 +1,27 @@
+name: Git Governance
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    name: Validate governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PR — kiểm tra tên nhánh + commit message
+        if: github.event_name == 'pull_request'
+        run: .github/scripts/validate-git-governance.sh --pr "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+      - name: Push — chặn push thẳng nhánh chính
+        if: github.event_name == 'push'
+        run: .github/scripts/validate-git-governance.sh --push "${{ github.event.before }}" "${{ github.sha }}"
