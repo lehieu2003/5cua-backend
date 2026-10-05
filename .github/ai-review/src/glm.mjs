@@ -9,7 +9,7 @@ export class GlmError extends Error {
   }
 }
 
-const RETRY_DELAY_MS = 3000;
+const RETRY_DELAYS_MS = [5000, 15000]; // free-tier thường quá tải theo spike — backoff đủ dài
 const DEFAULT_BASE_URL = 'https://api.z.ai/api/paas/v4';
 const DEFAULT_MODEL = 'glm-5.3-flash';
 
@@ -84,8 +84,17 @@ export async function callGLM({
     return { raw: await attempt() };
   } catch (err) {
     if (err instanceof GlmError && err.retryable) {
-      await sleep(RETRY_DELAY_MS);
-      return { raw: await attempt() };
+      let last = err;
+      for (const delay of RETRY_DELAYS_MS) {
+        await sleep(delay);
+        try {
+          return { raw: await attempt() };
+        } catch (retryErr) {
+          if (!(retryErr instanceof GlmError && retryErr.retryable)) throw retryErr;
+          last = retryErr;
+        }
+      }
+      throw last;
     }
     throw err;
   }
