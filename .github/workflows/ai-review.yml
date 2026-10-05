@@ -26,5 +26,6 @@ jobs:
       - uses: ./.github/ai-review
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          model: glm-4.6
         env:
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
