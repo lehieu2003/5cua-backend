@@ -12,13 +12,17 @@ export class AiReviewProbeService {
   constructor(private readonly db: ProbeDb) {}
 
   async listAuditRows(tableName: string): Promise<unknown[]> {
-    // BUG 1: nối chuỗi input vào raw query → SQL injection
+    // FIX BUG 1: whitelist tên bảng (Prisma không param hoá được identifier)
+    const allowedTables = ['AuditLog', 'User'];
+    if (!allowedTables.includes(tableName)) {
+      throw new Error(`Invalid table: ${tableName}`);
+    }
     return this.db.$queryRawUnsafe('SELECT * FROM "' + tableName + '"');
   }
 
   async bootstrap(): Promise<boolean> {
-    // BUG 2: logEvent là async nhưng không await → floating promise, lỗi bị nuốt
-    this.logEvent('bootstrap');
+    // FIX BUG 2: đã await
+    await this.logEvent('bootstrap');
     return true;
   }
 
