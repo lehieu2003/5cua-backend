@@ -99,6 +99,27 @@ class MockAuthRepository {
     return record;
   }
 
+  async findLatestActiveTokenInFamily(familyId: string) {
+    let latest: RefreshTokenRecord | undefined;
+    for (const record of this.refreshTokens.values()) {
+      if (record.familyId === familyId && !record.isRevoked) {
+        if (!latest || record.createdAt >= latest.createdAt) {
+          latest = record;
+        }
+      }
+    }
+    return latest;
+  }
+
+  /** Giả lập token đã "ngủ" quá grace period (30s) */
+  async backdateActiveTokens(ageMs: number) {
+    for (const record of this.refreshTokens.values()) {
+      if (!record.isRevoked) {
+        record.createdAt = new Date(Date.now() - ageMs);
+      }
+    }
+  }
+
   async revokeFamilyTokens(familyId: string) {
     let count = 0;
     for (const record of this.refreshTokens.values()) {
@@ -226,8 +247,10 @@ async function runTests() {
 
       const rotatedRefreshToken = res.body.data?.refreshToken;
 
-      // Test 2: Replay / Reuse Detection
-      // Client presents old consumed token again!
+      // Test 2: Replay / Reuse Detection (Grace Period 30s cho mobile race)
+      // 2a. Client presenting consumed token again NGAY (< 30s grace):
+      //     server CẤP LẠI token mới và KHÔNG revoke family (chống race condition
+      //     trên mạng di động — commit 91da743)
       {
         const replayRes = await makeRequest({
           method: 'POST',
@@ -235,18 +258,35 @@ async function runTests() {
           body: { refreshToken: initialRefreshToken1 },
         });
 
-        const replayPassed = replayRes.status === 401;
+        const replayPassed =
+          replayRes.status === 200 && !!replayRes.body?.data?.refreshToken;
         results.push({
-          name: 'Reuse Detection: Presenting consumed token returns 401 Unauthorized',
+          name: 'Grace Period: Replay consumed token trong 30s → cấp lại token mới (200)',
           passed: replayPassed,
           details: `status=${replayRes.status}, message=${replayRes.body?.message}`,
+        });
+
+        // 2b. Vượt quá grace period (backdate 31s): replay lại →
+        //     revoke TOÀN BỘ family + 401
+        await mockRepo.backdateActiveTokens(31_000);
+
+        const replayAfterGrace = await makeRequest({
+          method: 'POST',
+          path: '/api/v1/auth/refresh',
+          body: { refreshToken: initialRefreshToken1 },
+        });
+
+        results.push({
+          name: 'Reuse Detection: Replay sau 30s grace → 401 Unauthorized',
+          passed: replayAfterGrace.status === 401,
+          details: `status=${replayAfterGrace.status}, message=${replayAfterGrace.body?.message}`,
         });
 
         // Verify family was invalidated
         const rotatedRecord = await mockRepo.findRefreshTokenByHash(hashToken(rotatedRefreshToken));
         const familyRevoked = rotatedRecord?.isRevoked === true;
         results.push({
-          name: 'Reuse Detection: Entire session family is invalidated upon reuse attempt',
+          name: 'Reuse Detection: Sau replay quá grace, toàn bộ family bị vô hiệu hóa',
           passed: familyRevoked,
           details: `rotatedRecord.isRevoked=${rotatedRecord?.isRevoked}`,
         });
@@ -259,7 +299,7 @@ async function runTests() {
         });
 
         results.push({
-          name: 'Reuse Detection: Previously rotated token in revoked family is rejected',
+          name: 'Reuse Detection: Token đã rotate trong family bị revoke cũng bị từ chối (401)',
           passed: rotatedRes.status === 401,
           details: `status=${rotatedRes.status}`,
         });
