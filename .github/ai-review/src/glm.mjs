@@ -50,15 +50,25 @@ export async function callGLM({
         body: payload,
         signal: controller.signal,
       });
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const apiMsg = data?.error?.message ?? `HTTP ${res.status}`;
+        // body lỗi có thể là {error:{message}} (OpenAI/Zhipu) hoặc [{error:{message}}] (Gemini),
+        // hoặc không phải JSON — đọc text một lần rồi suy ra message.
+        const text = await res.text().catch(() => '');
+        let errData = null;
+        try {
+          errData = JSON.parse(text);
+        } catch {
+          /* giữ text nguyên văn */
+        }
+        const errObj = Array.isArray(errData) ? errData[0]?.error : errData?.error;
+        const apiMsg = errObj?.message ?? (text || `HTTP ${res.status}`).slice(0, 200);
         const retryable = res.status === 429 || res.status >= 500;
         throw new GlmError(`AI API lỗi: ${apiMsg}`, { status: res.status, retryable });
       }
+      const data = await res.json().catch(() => ({}));
       const content = data?.choices?.[0]?.message?.content;
       if (typeof content !== 'string') {
-        throw new GlmError('GLM trả về phản hồi không có nội dung', { retryable: false });
+        throw new GlmError('AI trả về phản hồi không có nội dung', { retryable: false });
       }
       return content;
     } catch (err) {
