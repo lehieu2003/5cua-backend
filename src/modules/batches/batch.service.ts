@@ -370,6 +370,8 @@ export class BatchService {
     for (const item of distribution) {
       const quantity = parseInt(String(item?.quantity ?? 0), 10) || 0;
       const rawId = String(item?.id ?? item?.pondId ?? '').trim();
+      // Mobile gửi kèm entry tổng 'total_quantity' trong danh sách — bỏ qua
+      if (!rawId || rawId === 'total_quantity') continue;
       let pond: { id: number; name: string } | null = null;
       const numericId = parseInt(rawId, 10);
       if (Number.isFinite(numericId) && String(numericId) === rawId) {

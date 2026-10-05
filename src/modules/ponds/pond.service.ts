@@ -102,7 +102,8 @@ export class PondService {
         last_water_check: lastCheck
           ? {
               check_date: lastCheck.checkDate.toISOString(),
-              status_check: lastCheck.hasWarning ? 'warning' : 'good',
+              // Mobile water_tank_card so sánh === 'safe' để hiện icon an toàn
+              status_check: lastCheck.hasWarning ? 'warning' : 'safe',
             }
           : null,
         last_inspection_cleaning_check: lastCleaning

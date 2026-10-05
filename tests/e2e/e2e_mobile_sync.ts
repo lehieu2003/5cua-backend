@@ -236,11 +236,15 @@ async function run() {
       }
 
       const fixturePond = await prisma.pond.findUnique({ where: { id: f.pondId } });
-      // Đúng shape mobile gửi: id/name là TÊN ao, quantity là số con
+      // Đúng shape mobile gửi (pond_distribution.dart): entry tổng 'total_quantity'
+      // đứng đầu + các ao theo TÊN, quantity là số con
       const assign = await api('POST', `/api/v1/batches/${batchId}/assign`, {
         token: adminToken,
         body: {
-          distribution: [{ id: fixturePond?.name, name: fixturePond?.name, quantity: 10 }],
+          distribution: [
+            { id: 'total_quantity', name: 'Total Quantity', quantity: 10 },
+            { id: fixturePond?.name, name: fixturePond?.name, quantity: 10 },
+          ],
         },
       });
       const batchAfter = await prisma.stockImportBatch.findUnique({ where: { id: Number(batchId) } });
@@ -251,7 +255,7 @@ async function run() {
         parsedOk = Array.isArray(arr) && Number(arr[0]?.id) === f.pondId;
       } catch { parsedOk = false; }
       record(
-        '[ASSIGN] POST /batches/:id/assign (distribution theo tên ao) → 2xx + lưu distribution',
+        '[ASSIGN] POST /batches/:id/assign (shape thật: total_quantity + tên ao) → 2xx + lưu distribution',
         (assign.status === 200 || assign.status === 201) && parsedOk,
         `status=${assign.status}, note=${(batchAfter?.note || '').slice(0, 120)}, body=${JSON.stringify(assign.body).slice(0, 120)}`
       );
@@ -367,8 +371,10 @@ async function run() {
       const pondList = await api('GET', `/api/v1/ponds?farmId=${f.farmId}`, { token: adminToken });
       const pondItem = (pondList.body?.data ?? [])[0] ?? {};
       record(
-        '[FILTER] pond list có last_water_check (đúng lần đo vừa tạo)',
-        pondList.status === 200 && pondItem.last_water_check?.check_date !== undefined,
+        '[FILTER] pond list có last_water_check (status_check="safe" khớp water_tank_card)',
+        pondList.status === 200 &&
+          pondItem.last_water_check?.check_date !== undefined &&
+          pondItem.last_water_check?.status_check === 'safe',
         `wcPOST=${wcPost.status} ${JSON.stringify(wcPost.body).slice(0, 100)}, last_water_check=${JSON.stringify(pondItem.last_water_check ?? null).slice(0, 100)}`
       );
       record(
@@ -437,6 +443,45 @@ async function run() {
     } finally {
       await teardownTestFarm();
     }
+  }
+
+  // ── MOB-AUTHZ: non-member bị 403 ở endpoint mới (guard) + WORKER bị 403 ở assign (role) ──
+  {
+    // user không thuộc trại nào
+    const scopeUser = `e2e_mobsync_${Date.now()}`;
+    await api('POST', '/api/v1/auth/register', {
+      body: { username: scopeUser, password: 'Scope@123', fullName: 'Mobile Sync Scope' },
+    });
+    const scopeLogin = await api('POST', '/api/v1/auth/login', {
+      body: { username: scopeUser, password: 'Scope@123' },
+    });
+    const scopeToken = scopeLogin.body?.data?.accessToken || '';
+
+    const tasksForbidden = await api('GET', `/api/v1/farms/${farm1.id}/tasks`, { token: scopeToken });
+    record(
+      '[AUTHZ] GET /farms/:id/tasks với user ngoài trại → 403',
+      tasksForbidden.status === 403,
+      `status=${tasksForbidden.status}`
+    );
+
+    // farm1 có batch từ seed — WORKER của farm1 vẫn bị chặn bởi roleGuard
+    const farm1Batches = await api('GET', `/api/v1/batches?farmId=${farm1.id}`, { token: workerToken });
+    const farm1BatchId = (farm1Batches.body?.data ?? [])[0]?.id;
+    const farm1Pond = await prisma.pond.findFirst({ where: { farmId: farm1.id } });
+    if (farm1BatchId && farm1Pond) {
+      const workerAssign = await api('POST', `/api/v1/batches/${farm1BatchId}/assign`, {
+        token: workerToken,
+        body: { distribution: [{ id: farm1Pond.name, name: farm1Pond.name, quantity: 1 }] },
+      });
+      record(
+        '[AUTHZ] POST /batches/:id/assign với WORKER → 403 (roleGuard)',
+        workerAssign.status === 403,
+        `status=${workerAssign.status}`
+      );
+    } else {
+      record('[AUTHZ] POST /batches/:id/assign với WORKER → 403 (roleGuard)', true, 'SKIP: farm1 không có batch/pond');
+    }
+    await prisma.user.deleteMany({ where: { username: scopeUser } }).catch(() => {});
   }
 
   printSummary(SUITE);
