@@ -50,7 +50,7 @@ export async function runReview(config) {
     if (diffTextOverride !== undefined) {
       entries = normalizeDiff({ diffText: diffTextOverride });
     } else if (isPr) {
-      entries = await fetchPrFiles({ repo, prNumber, fetchImpl, execFileSyncImpl, baseSha, notes });
+      entries = await fetchPrFiles({ repo, prNumber, token, fetchImpl, execFileSyncImpl, baseSha, notes });
     } else {
       const range = resolvePushRange({ before: config.before, after: config.after, execFileSyncImpl, notes });
       const diffText = execFileSyncImpl(['git', '-C', process.cwd(), 'diff', range]);
@@ -127,7 +127,7 @@ export async function runReview(config) {
   return { exitCode: 0, findings, notes, skippedFiles, truncatedFiles, markdown };
 }
 
-async function fetchPrFiles({ repo, prNumber, fetchImpl, execFileSyncImpl, baseSha, notes }) {
+async function fetchPrFiles({ repo, prNumber, token, fetchImpl, execFileSyncImpl, baseSha, notes }) {
   const perPage = 100;
   const files = [];
   let page = 1;
