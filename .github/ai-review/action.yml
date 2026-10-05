@@ -1,0 +1,28 @@
+name: 'AI Code Review'
+description: 'Review code bằng GLM, comment tiếng Việt lên PR/commit'
+inputs:
+  github-token:
+    description: 'Token để đăng comment'
+    default: ${{ github.token }}
+  model:
+    description: 'Model GLM'
+    default: 'glm-5.3-flash'
+  language:
+    description: 'Ngôn ngữ nhận xét'
+    default: 'vi'
+  skip-patterns:
+    description: 'Glob bỏ qua, cách nhau bằng xuống dòng'
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ZAI_MODEL: ${{ inputs.model }}
+        ZAI_LANGUAGE: ${{ inputs.language }}
+        ZAI_SKIP_PATTERNS: ${{ inputs.skip-patterns }}
+      run: node "$GITHUB_ACTION_PATH/src/review.mjs"

@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: lehieu2003/code-review-bot/ai-review@main
+      - uses: ./.github/ai-review
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         env:

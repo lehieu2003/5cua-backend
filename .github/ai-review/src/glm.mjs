@@ -1,0 +1,115 @@
+// glm.mjs — client Z.ai OpenAI-compatible + parse findings từ phản hồi model.
+
+export class GlmError extends Error {
+  constructor(message, { status, retryable } = {}) {
+    super(message);
+    this.name = 'GlmError';
+    this.status = status;
+    this.retryable = retryable;
+  }
+}
+
+const RETRY_DELAY_MS = 3000;
+const DEFAULT_BASE_URL = 'https://api.z.ai/api/paas/v4';
+const DEFAULT_MODEL = 'glm-5.3-flash';
+
+export async function callGLM({
+  system,
+  user,
+  baseUrl = DEFAULT_BASE_URL,
+  apiKey,
+  model = DEFAULT_MODEL,
+  fetchImpl = fetch,
+  timeoutMs = 120000,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+}) {
+  if (!apiKey) {
+    throw new GlmError('Thiếu ZAI_API_KEY', { retryable: false });
+  }
+  const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+  const payload = JSON.stringify({
+    model,
+    temperature: 0.1,
+    max_tokens: 4000,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+  });
+
+  const attempt = async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetchImpl(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: payload,
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const apiMsg = data?.error?.message ?? `HTTP ${res.status}`;
+        const retryable = res.status === 429 || res.status >= 500;
+        throw new GlmError(`GLM API lỗi: ${apiMsg}`, { status: res.status, retryable });
+      }
+      const content = data?.choices?.[0]?.message?.content;
+      if (typeof content !== 'string') {
+        throw new GlmError('GLM trả về phản hồi không có nội dung', { retryable: false });
+      }
+      return content;
+    } catch (err) {
+      if (err instanceof GlmError) throw err;
+      // lỗi mạng / abort → coi như retryable
+      throw new GlmError(`GLM API lỗi mạng: ${err.message}`, { retryable: true });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    return { raw: await attempt() };
+  } catch (err) {
+    if (err instanceof GlmError && err.retryable) {
+      await sleep(RETRY_DELAY_MS);
+      return { raw: await attempt() };
+    }
+    throw err;
+  }
+}
+
+const VALID_SEVERITIES = new Set(['critical', 'major', 'minor']);
+
+export function parseFindings(raw) {
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+
+  let text = raw.trim();
+  let parsed = tryParse(text);
+  if (parsed === undefined) {
+    const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fence) parsed = tryParse(fence[1].trim());
+  }
+  if (parsed === undefined) {
+    const m = text.match(/"findings"\s*:\s*(\[[\s\S]*\])/);
+    if (m) parsed = tryParse(`{"findings": ${m[1]}}`);
+  }
+  if (parsed === undefined || parsed === null || typeof parsed !== 'object') return null;
+
+  const findings = parsed.findings;
+  if (!Array.isArray(findings)) return null;
+
+  return findings.filter(
+    (f) => f && typeof f === 'object' && VALID_SEVERITIES.has(f.severity)
+  );
+}
+
+function tryParse(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return undefined;
+  }
+}
