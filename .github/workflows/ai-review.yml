@@ -1,0 +1,29 @@
+name: AI Code Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ai-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: lehieu2003/code-review-bot/ai-review@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
