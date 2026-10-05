@@ -10,7 +10,7 @@ export function stickyMarker(prNumber) {
 }
 export const STICKY_MARKER = '<!-- ai-code-review:pr-'; // prefix để nhận diện comment của bot
 
-export function formatReview({ findings, sha, mode, skippedFiles = [], truncatedFiles = [] }, prNumber) {
+export function formatReview({ findings, sha, mode, skippedFiles = [], truncatedFiles = [], notes = [] }, prNumber) {
   const lines = [];
   lines.push(`## 🤖 AI Code Review — \`${sha}\``);
   lines.push('');
@@ -28,6 +28,10 @@ export function formatReview({ findings, sha, mode, skippedFiles = [], truncated
       if (f.suggestion) lines.push('', `> 💡 ${f.suggestion}`);
       lines.push('');
     }
+  }
+  if (notes.length > 0) {
+    lines.push('', '📝 Ghi chú:');
+    for (const n of notes) lines.push(`- ${n}`);
   }
   if (truncatedFiles.length > 0) {
     lines.push('', `⚠️ Không review được (diff vượt giới hạn): ${truncatedFiles.join(', ')}`);

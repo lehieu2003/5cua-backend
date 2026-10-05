@@ -90,7 +90,7 @@ export async function runReview(config) {
     }
   } catch (err) {
     if (err instanceof GlmError) {
-      console.error(`❌ ${err.message}${err.retryable ? ' (đã retry 1 lần)' : ''}`);
+      console.error(`❌ ${err.message}${err.retryable ? ' (đã retry tối đa 3 lần)' : ''}`);
     } else {
       console.error(`❌ Lỗi khi gọi AI: ${err.message}`);
     }
@@ -98,7 +98,7 @@ export async function runReview(config) {
   }
 
   // 5. Format + đăng
-  const markdown = formatReview({ findings, sha, mode: isPr ? 'pr' : 'push', skippedFiles, truncatedFiles }, prNumber);
+  const markdown = formatReview({ findings, sha, mode: isPr ? 'pr' : 'push', skippedFiles, truncatedFiles, notes }, prNumber);
 
   if (dryRun) {
     console.log(markdown);
@@ -150,7 +150,7 @@ async function fetchPrFiles({ repo, prNumber, token, fetchImpl, execFileSyncImpl
     if (files.length > MAX_PR_FILES) {
       notes.push(`PR có >${MAX_PR_FILES} file đổi — chuyển sang git diff tổng thể.`);
       const diffText = execFileSyncImpl([
-        'git', '-C', process.cwd(), 'diff', `origin/${baseSha}...HEAD`,
+        'git', '-C', process.cwd(), 'diff', `${baseSha}...HEAD`,
       ]);
       return normalizeDiff({ diffText });
     }
