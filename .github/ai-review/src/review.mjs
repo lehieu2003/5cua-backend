@@ -38,7 +38,7 @@ export async function runReview(config) {
   const notes = [];
 
   if (!offline && !apiKey) {
-    console.error('❌ Thiếu ZAI_API_KEY — bot không thể gọi AI review. Đặt secret ZAI_API_KEY trong repo.');
+    console.error('❌ Thiếu AI_API_KEY — bot không thể gọi AI review. Đặt secret AI_API_KEY trong repo.');
     return { exitCode: 1, findings: [], notes, skippedFiles: [], truncatedFiles: [] };
   }
 
@@ -203,11 +203,11 @@ async function main() {
     after: event.after,
     sha: event.pull_request?.head?.sha ?? event.after ?? 'local',
     token: process.env.GITHUB_TOKEN,
-    apiKey: process.env.ZAI_API_KEY,
-    model: process.env.ZAI_MODEL || undefined,
-    language: process.env.ZAI_LANGUAGE || 'vi',
-    skipPatterns: (process.env.ZAI_SKIP_PATTERNS || '').split('\n').map((s) => s.trim()).filter(Boolean),
-    baseUrl: process.env.ZAI_BASE_URL || undefined,
+    apiKey: process.env.AI_API_KEY,
+    model: process.env.AI_MODEL || undefined,
+    language: process.env.AI_LANGUAGE || 'vi',
+    skipPatterns: (process.env.AI_SKIP_PATTERNS || '').split('\n').map((s) => s.trim()).filter(Boolean),
+    baseUrl: process.env.AI_BASE_URL || undefined,
     dryRun,
     offline,
     diffTextOverride,
@@ -219,7 +219,7 @@ async function main() {
       'utf8'
     );
   }
-  if (offline && process.env.ZAI_API_KEY === undefined) {
+  if (offline && process.env.AI_API_KEY === undefined) {
     config.offlineFindings = JSON.parse(
       await readFile(
         fileURLToPath(new URL('../../test/fixtures/glm-response.json', import.meta.url)),

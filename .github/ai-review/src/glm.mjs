@@ -24,7 +24,7 @@ export async function callGLM({
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
 }) {
   if (!apiKey) {
-    throw new GlmError('Thiếu ZAI_API_KEY', { retryable: false });
+    throw new GlmError('Thiếu AI_API_KEY', { retryable: false });
   }
   const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   const payload = JSON.stringify({
@@ -54,7 +54,7 @@ export async function callGLM({
       if (!res.ok) {
         const apiMsg = data?.error?.message ?? `HTTP ${res.status}`;
         const retryable = res.status === 429 || res.status >= 500;
-        throw new GlmError(`GLM API lỗi: ${apiMsg}`, { status: res.status, retryable });
+        throw new GlmError(`AI API lỗi: ${apiMsg}`, { status: res.status, retryable });
       }
       const content = data?.choices?.[0]?.message?.content;
       if (typeof content !== 'string') {
@@ -64,7 +64,7 @@ export async function callGLM({
     } catch (err) {
       if (err instanceof GlmError) throw err;
       // lỗi mạng / abort → coi như retryable
-      throw new GlmError(`GLM API lỗi mạng: ${err.message}`, { retryable: true });
+      throw new GlmError(`AI API lỗi mạng: ${err.message}`, { retryable: true });
     } finally {
       clearTimeout(timer);
     }

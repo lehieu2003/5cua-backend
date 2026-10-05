@@ -22,7 +22,7 @@ runs:
     - shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        ZAI_MODEL: ${{ inputs.model }}
-        ZAI_LANGUAGE: ${{ inputs.language }}
-        ZAI_SKIP_PATTERNS: ${{ inputs.skip-patterns }}
+        AI_MODEL: ${{ inputs.model }}
+        AI_LANGUAGE: ${{ inputs.language }}
+        AI_SKIP_PATTERNS: ${{ inputs.skip-patterns }}
       run: node "$GITHUB_ACTION_PATH/src/review.mjs"
