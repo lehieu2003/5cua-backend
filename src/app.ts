@@ -40,14 +40,19 @@ if (env.TRUST_PROXY === 'true') {
 
 // ── Bảo mật & Phòng thủ (Security Middlewares) ───────────────────
 app.disable('x-powered-by');
+// Strict CSP cho toàn bộ API: script-src KHÔNG có unsafe-inline/eval —
+// chặn inline script injection. JSON API không cần chạy script nào.
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        imgSrc: ["'self'", 'data:', 'validator.swagger.io'],
+        imgSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -79,6 +84,15 @@ app.get('/health', (_req: Request, res: Response) => {
 // ── Swagger UI (chỉ bật ngoài production — tránh rò rỉ sơ đồ API) ──
 if (!env.isProd) app.use(
   '/api-docs',
+  // Swagger UI cần inline script/style — nới CSP CHỈ cho path này,
+  // mọi route khác vẫn giữ strict CSP từ helmet ở trên.
+  (_req: Request, res: Response, next: import('express').NextFunction) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: validator.swagger.io; connect-src 'self'"
+    );
+    next();
+  },
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     customSiteTitle: '🦀 5Cua Farm API Docs',
