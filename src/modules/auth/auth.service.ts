@@ -280,7 +280,7 @@ export class AuthService {
     return updatedUser;
   }
 
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(dto: { refreshToken: string }) {  // controller luôn truyền string (cookie ?? body)
     // 1. Verify token signature
     let decoded: any;
     try {
@@ -473,7 +473,7 @@ export class AuthService {
     return { success: true };
   }
 
-  async logout(dto: LogoutDto) {
+  async logout(dto: { refreshToken: string }) {  // controller luôn truyền string
     if (dto?.refreshToken) {
       const tokenHash = hashToken(dto.refreshToken);
       const tokenRecord = await this.repo.findRefreshTokenByHash(tokenHash);

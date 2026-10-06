@@ -6,6 +6,8 @@ import { authService, AuthService } from './auth.service';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { AuthenticatedRequest } from '../../common/guards/auth.guard';
 import { MESSAGES } from '../../common/constants/messages.constant';
+import { AppError } from '../../common/errors/app.error';
+import { REFRESH_COOKIE, isWebRequest, refreshCookieClearOptions, refreshCookieOptions, resolveRefreshToken } from './auth.cookies';
 
 export class AuthController {
   constructor(private readonly service: AuthService = authService) {}
@@ -16,6 +18,12 @@ export class AuthController {
   async login(req: Request, res: Response) {
     try {
       const result = await this.service.login(req.body);
+      if (isWebRequest(req)) {
+        // Web: refresh token đi vào cookie HttpOnly, KHÔNG trả trong body (chống XSS đọc token)
+        res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions());
+        const { refreshToken: _omit, ...webResult } = result;
+        return ResponseUtil.success(res, webResult, MESSAGES.AUTH.LOGIN_SUCCESS);
+      }
       return ResponseUtil.success(res, result, MESSAGES.AUTH.LOGIN_SUCCESS);
     } catch (error: any) {
       return ResponseUtil.fromError(res, error);
@@ -49,7 +57,15 @@ export class AuthController {
    */
   async refreshToken(req: Request, res: Response) {
     try {
-      const result = await this.service.refreshToken(req.body);
+      const token = resolveRefreshToken(req);
+      if (!token) throw AppError.badRequest('Thiếu refresh token (cookie hoặc body)');
+      const result = await this.service.refreshToken({ refreshToken: token });
+      if (isWebRequest(req)) {
+        // Rotation: ghi đè cookie bằng refresh token MỚI, body không chứa token
+        res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions());
+        const { refreshToken: _omit, ...webResult } = result;
+        return ResponseUtil.success(res, webResult, 'Làm mới token thành công');
+      }
       return ResponseUtil.success(res, result, 'Làm mới token thành công');
     } catch (error: any) {
       return ResponseUtil.fromError(res, error);
@@ -89,7 +105,11 @@ export class AuthController {
 
   async logout(req: Request, res: Response) {
     try {
-      await this.service.logout(req.body);
+      const token = resolveRefreshToken(req);
+      if (token) await this.service.logout({ refreshToken: token });
+      if (req.cookies?.[REFRESH_COOKIE]) {
+        res.clearCookie(REFRESH_COOKIE, refreshCookieClearOptions());
+      }
       return ResponseUtil.success(res, null, MESSAGES.AUTH.LOGOUT_SUCCESS);
     } catch (error: any) {
       return ResponseUtil.fromError(res, error);

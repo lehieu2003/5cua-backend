@@ -42,12 +42,14 @@ export const UpdateProfileSchema = z.object({
   avatarBase64: z.string().optional(),
 });
 
+// refreshToken optional: web gửi token qua HttpOnly cookie (không có trong body),
+// controller đọc cookie ?? body — thiếu cả hai sẽ bị chặn 400 ở controller.
 export const RefreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().min(1, 'Refresh token is required').optional(),
 });
 
 export const LogoutSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().min(1, 'Refresh token is required').optional(),
 });
 
 export type LoginDto = z.infer<typeof LoginSchema>;
