@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './common/config/swagger.config';
@@ -61,12 +62,17 @@ app.use(
 app.use(globalRateLimiter);
 
 // ── Middlewares cơ bản ───────────────────────────────────────────
+// credentials: true — web admin gửi cookie refresh token (HttpOnly) qua /auth/*.
+// Origin phải khớp chính xác trong allowlist (không dùng wildcard). Mobile/curl
+// không gửi Origin nên vẫn đi qua bình thường.
 app.use(
   cors({
-    origin: (origin, cb) => cb(null, !origin || env.corsAllowList.includes(origin)),
-    credentials: false,
+    origin: (origin, cb) =>
+      cb(null, !origin || (env.corsAllowList.includes(origin) ? origin : false)),
+    credentials: true,
   })
 );
+app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(morgan(env.isDev ? 'dev' : 'combined'));

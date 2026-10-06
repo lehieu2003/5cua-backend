@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { originGuard } from '../../common/middlewares/origin.guard';
+import { env } from '../../common/config/env';
 import { asyncHandler } from '../../common/utils/async.handler';
 import { validate } from '../../common/middlewares/validate.middleware';
 import { authGuard, optionalAuth } from '../../common/guards/auth.guard';
@@ -97,6 +99,7 @@ router.post('/api/v1/auth/register', authRateLimiter, optionalAuth, validate(Reg
  */
 router.post(
   '/api/v1/auth/refresh',
+  originGuard(env.corsAllowList),
   refreshRateLimiter,
   validate(RefreshTokenSchema),
   asyncHandler((req, res) => authController.refreshToken(req, res))
@@ -124,6 +127,7 @@ router.post(
  */
 router.post(
   '/api/v1/auth/logout',
+  originGuard(env.corsAllowList),
   validate(LogoutSchema),
   asyncHandler((req, res) => authController.logout(req, res))
 );
