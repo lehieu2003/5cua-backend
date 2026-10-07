@@ -255,6 +255,9 @@ export class AuthService {
 
     const newHash = await argon2.hash(dto.newPassword);
     await this.repo.updatePassword(userId, newHash);
+    // Thu hồi MỌI refresh token của user — mật khẩu mới phải đuổi được phiên
+    // cũ đã bị đánh cắp (thiết bị mất / token leak), không cho sống nốt 30 ngày.
+    await this.repo.revokeAllUserTokens(userId);
     return { success: true };
   }
 
